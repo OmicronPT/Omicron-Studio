@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Omicron Studio — Prenota</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
+  <style>
+    /* ─── VARIABILI ─────────────────────────────────────── */
+    :root {
+      --bg:        #0d0d0f;
+      --surface:   #141418;
+      --border:    #2a2a32;
+      --accent:    #c8a96e;
+      --accent2:   #8b6f47;
+      --text:      #e8e4dc;
+      --muted:     #6b6870;
+      --danger:    #c0392b;
+      --success:   #27ae60;
+      --radius:    12px;
+      --ff-serif:  'Cormorant Garamond', Georgia, serif;
+      --ff-mono:   'DM Mono', monospace;
+    }
+
+    /* ─── RESET ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--ff-mono);
+      font-size: 14px;
+      font-weight: 300;
+      min-height: 100vh;
+      letter-spacing: 0.02em;
+    }
+
+    /* ─── LAYOUT ─────────────────────────────────────────── */
+    .wrapper {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 0 20px 80px;
+    }
+
+    /* ─── HEADER ─────────────────────────────────────────── */
+    header {
+      padding: 48px 0 36px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 40px;
+    }
+    .logo {
+      font-family: var(--ff-serif);
+      font-size: 32px;
+      font-weight: 300;
+      letter-spacing: 0.12em;
+      color: var(--accent);
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+    .logo span { font-weight: 600; }
+    .tagline {
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    /* ─── CARD CLIENTE ───────────────────────────────────── */
+    .card-cliente {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 36px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .avatar {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent2), var(--accent));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--ff-serif);
+      font-size: 22px;
+      color: var(--bg);
+      flex-shrink: 0;
+    }
+    .info-cliente h2 {
+      font-family: var(--ff-serif);
+      font-size: 22px;
+      font-weight: 400;
+      color: var(--text);
+      line-height: 1.2;
+    }
+    .pills {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      letter-spacing: 0.05em;
+    }
+    .pill-lezioni {
+      background: rgba(200, 169, 110, 0.12);
+      border: 1px solid rgba(200, 169, 110, 0.3);
+      color: var(--accent);
+    }
+    .pill-scadenza {
+      background: rgba(107, 104, 112, 0.15);
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .pill-warning {
+      background: rgba(192, 57, 43, 0.12);
+      border: 1px solid rgba(192, 57, 43, 0.3);
+      color: #e74c3c;
+    }
+
+    /* ─── SEZIONE TITOLO ─────────────────────────────────── */
+    .section-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .section-title {
+      font-family: var(--ff-serif);
+      font-size: 20px;
+      font-weight: 300;
+      letter-spacing: 0.06em;
+      color: var(--text);
+    }
+    .section-count {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+    }
+
+    /* ─── SLOT SESSIONE ──────────────────────────────────── */
+    .sessioni-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .slot {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 16px;
+      transition: border-color 0.2s, background 0.2s;
+      cursor: pointer;
+    }
+    .slot:hover { border-color: var(--accent2); background: #16161b; }
+    .slot.già-prenotato { border-color: rgba(200, 169, 110, 0.5); background: rgba(200, 169, 110, 0.04); }
+
+    .slot-data {
+      font-family: var(--ff-serif);
+      font-size: 17px;
+      font-weight: 400;
+      color: var(--text);
+      text-transform: capitalize;
+      margin-bottom: 4px;
+    }
+    .slot-meta {
+      color: var(--muted);
+      font-size: 12px;
+      display: flex;
+      gap: 14px;
+      align-items: center;
+    }
+    .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--border); }
+
+    .slot-action { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+
+    .posti-indicator {
+      display: flex;
+      gap: 4px;
+    }
+    .posto {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      opacity: 0.25;
+    }
+    .posto.occupato { opacity: 1; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-family: var(--ff-mono);
+      font-size: 12px;
+      font-weight: 400;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: var(--bg);
+    }
+    .btn-primary:hover { background: #d4b87a; }
+    .btn-primary:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
+    .btn-danger {
+      background: transparent;
+      border: 1px solid rgba(192, 57, 43, 0.4);
+      color: #e74c3c;
+    }
+    .btn-danger:hover { background: rgba(192, 57, 43, 0.1); }
+    .btn-sm { padding: 6px 14px; font-size: 11px; }
+
+    /* ─── MIE PRENOTAZIONI ───────────────────────────────── */
+    .prenotazioni-list { display: flex; flex-direction: column; gap: 8px; }
+    .prenotazione-item {
+      background: rgba(200, 169, 110, 0.05);
+      border: 1px solid rgba(200, 169, 110, 0.2);
+      border-radius: 8px;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .prenotazione-info {
+      font-family: var(--ff-serif);
+      font-size: 16px;
+      color: var(--text);
+      text-transform: capitalize;
+    }
+    .prenotazione-ora { font-family: var(--ff-mono); font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    /* ─── DIVIDER ────────────────────────────────────────── */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 40px 0;
+    }
+
+    /* ─── TOAST ──────────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 24px;
+      font-size: 13px;
+      color: var(--text);
+      opacity: 0;
+      transition: all 0.3s;
+      pointer-events: none;
+      z-index: 999;
+      max-width: 340px;
+      text-align: center;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    #toast.success { border-color: rgba(39, 174, 96, 0.4); color: #2ecc71; }
+    #toast.error { border-color: rgba(192, 57, 43, 0.4); color: #e74c3c; }
+
+    /* ─── LOADING ────────────────────────────────────────── */
+    .spinner {
+      width: 36px; height: 36px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 60px auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+    }
+    .empty-state .icon { font-size: 32px; margin-bottom: 12px; }
+
+    /* ─── MODAL ──────────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px;
+      max-width: 360px;
+      width: 90%;
+      transform: translateY(20px);
+      transition: transform 0.2s;
+    }
+    .modal-overlay.open .modal { transform: translateY(0); }
+    .modal h3 { font-family: var(--ff-serif); font-size: 22px; margin-bottom: 8px; }
+    .modal p { color: var(--muted); font-size: 13px; margin-bottom: 24px; line-height: 1.6; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+    @media (max-width: 480px) {
+      .card-cliente { flex-direction: column; align-items: flex-start; }
+      .slot { grid-template-columns: 1fr; }
+      .slot-action { flex-direction: row; align-items: center; justify-content: space-between; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="wrapper">
+  <header>
+    <div class="logo"><span>OMICRON</span> STUDIO</div>
+    <div class="tagline">Personal Training · Napoli</div>
+  </header>
+
+  <!-- Stato cliente -->
+  <div id="card-cliente"></div>
+
+  <!-- Prenotazioni attive -->
+  <div id="section-prenotazioni" style="display:none;">
+    <div class="section-header">
+      <div class="section-title">Le mie prenotazioni</div>
+    </div>
+    <div id="lista-prenotazioni" class="prenotazioni-list"></div>
+    <div class="divider"></div>
+  </div>
+
+  <!-- Sessioni disponibili -->
+  <div class="section-header">
+    <div class="section-title">Sessioni disponibili</div>
+    <div class="section-count" id="count-sessioni"></div>
+  </div>
+  <div id="lista-sessioni" class="sessioni-list">
+    <div class="spinner"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- Modal conferma cancellazione -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <h3>Cancella prenotazione</h3>
+    <p id="modal-text">Sei sicuro di voler cancellare questa prenotazione? La lezione verrà riaccreditata al tuo pacchetto.</p>
+    <div class="modal-actions">
+      <button class="btn btn-sm" onclick="chiudiModal()">Annulla</button>
+      <button class="btn btn-danger btn-sm" id="btn-conferma-cancella">Cancella</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── CONFIGURAZIONE ─────────────────────────────────────────
+// SOSTITUISCI con il tuo URL Apps Script dopo il deploy
+const BACKEND_URL = "https://script.google.com/macros/s/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX/exec";
+
+// Il token viene letto dall'URL: tuosito.com/prenota.html?t=TOKEN_CLIENTE
+const token = new URLSearchParams(window.location.search).get("t");
+
+// ─── STATO ───────────────────────────────────────────────────
+let cliente = null;
+let sessioni = [];
+let prenotazioni = [];
+let idDaCancellare = null;
+
+// ─── INIT ─────────────────────────────────────────────────────
+async function init() {
+  if (!token) {
+    document.getElementById("card-cliente").innerHTML = `
+      <div class="empty-state">
+        <div class="icon">🔒</div>
+        <div>Link non valido. Contatta lo studio.</div>
+      </div>`;
+    return;
+  }
+
+  try {
+    [cliente, sessioni, prenotazioni] = await Promise.all([
+      api("getCliente"),
+      api("getSessioni"),
+      api("getPrenotazioniCliente"),
+    ]);
+
+    if (cliente.error) throw new Error(cliente.error);
+
+    renderCliente();
+    renderPrenotazioni();
+    renderSessioni();
+  } catch (e) {
+    document.getElementById("lista-sessioni").innerHTML = `
+      <div class="empty-state">
+        <div class="icon">⚠️</div>
+        <div>${e.message}</div>
+      </div>`;
+  }
+}
+
+// ─── API ──────────────────────────────────────────────────────
+async function api(action, extra = {}) {
+  const url = `${BACKEND_URL}?action=${action}&token=${token}`;
+  const res = await fetch(url);
+  return res.json();
+}
+
+async function apiPost(body) {
+  const res = await fetch(BACKEND_URL, {
+    method: "POST",
+    body: JSON.stringify({ ...body, token }),
+  });
+  return res.json();
+}
+
+// ─── RENDER CLIENTE ───────────────────────────────────────────
+function renderCliente() {
+  const iniziali = (cliente.nome[0] + cliente.cognome[0]).toUpperCase();
+  const scadenza = new Date(cliente.dataScadenza);
+  const oggi = new Date();
+  const giorniRimanenti = Math.ceil((scadenza - oggi) / (1000*60*60*24));
+  const poche = cliente.lezioniRimanenti <= 2;
+
+  document.getElementById("card-cliente").innerHTML = `
+    <div class="card-cliente">
+      <div class="avatar">${iniziali}</div>
+      <div class="info-cliente">
+        <h2>${cliente.nome} ${cliente.cognome}</h2>
+        <div class="pills">
+          <span class="pill ${poche ? 'pill-warning' : 'pill-lezioni'}">
+            💪 ${cliente.lezioniRimanenti} lezioni rimanenti
+          </span>
+          <span class="pill ${giorniRimanenti <= 7 ? 'pill-warning' : 'pill-scadenza'}">
+            📅 scade ${formatData(cliente.dataScadenza)}
+          </span>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ─── RENDER PRENOTAZIONI ──────────────────────────────────────
+function renderPrenotazioni() {
+  const section = document.getElementById("section-prenotazioni");
+  const lista = document.getElementById("lista-prenotazioni");
+
+  if (!prenotazioni.length) { section.style.display = "none"; return; }
+  section.style.display = "block";
+
+  const prenotateIds = new Set(prenotazioni.map(p => {
+    const s = sessioni.find(s => {
+      return s.data === p.dataSessione && s.oraInizio === p.ora;
+    });
+    return s ? s.id : null;
+  }));
+
+  lista.innerHTML = prenotazioni.map(p => `
+    <div class="prenotazione-item">
+      <div>
+        <div class="prenotazione-info">${p.dataLeggibile}</div>
+        <div class="prenotazione-ora">🕐 ${p.ora}</div>
+      </div>
+      <button class="btn btn-danger btn-sm" onclick="apriModal('${p.id}', '${p.dataLeggibile}', '${p.ora}')">
+        Cancella
+      </button>
+    </div>`).join("");
+}
+
+// ─── RENDER SESSIONI ──────────────────────────────────────────
+function renderSessioni() {
+  const lista = document.getElementById("lista-sessioni");
+  const prenotateDate = new Set(prenotazioni.map(p => p.dataSessione + "_" + p.ora));
+
+  if (!sessioni.length) {
+    lista.innerHTML = `<div class="empty-state"><div class="icon">📅</div><div>Nessuna sessione disponibile al momento.</div></div>`;
+    return;
+  }
+
+  document.getElementById("count-sessioni").textContent = `${sessioni.length} disponibili`;
+
+  lista.innerHTML = sessioni.map(s => {
+    const prenotata = prenotateDate.has(s.data + "_" + s.oraInizio);
+    const postiOccupati = s.postiTotali - s.postiLiberi;
+
+    const posti = Array.from({ length: s.postiTotali }, (_, i) =>
+      `<div class="posto ${i < postiOccupati ? 'occupato' : ''}"></div>`).join("");
+
+    return `
+    <div class="slot ${prenotata ? 'già-prenotato' : ''}">
+      <div>
+        <div class="slot-data">${s.dataLeggibile}</div>
+        <div class="slot-meta">
+          <span>🕐 ${s.oraInizio} – ${s.oraFine}</span>
+          <div class="dot"></div>
+          <span>${s.postiLiberi} ${s.postiLiberi === 1 ? 'posto libero' : 'posti liberi'}</span>
+        </div>
+      </div>
+      <div class="slot-action">
+        <div class="posti-indicator">${posti}</div>
+        ${prenotata
+          ? `<button class="btn btn-sm" disabled style="color:var(--accent);border:1px solid rgba(200,169,110,0.3);background:rgba(200,169,110,0.08)">✓ Prenotata</button>`
+          : `<button class="btn btn-primary btn-sm" onclick="prenota('${s.id}')">Prenota</button>`
+        }
+      </div>
+    </div>`;
+  }).join("");
+}
+
+// ─── AZIONI ───────────────────────────────────────────────────
+async function prenota(idSessione) {
+  const btn = event.target;
+  btn.disabled = true;
+  btn.textContent = "...";
+
+  const res = await apiPost({ action: "prenota", idSessione });
+
+  if (res.error) {
+    toast(res.error, "error");
+    btn.disabled = false;
+    btn.textContent = "Prenota";
+    return;
+  }
+
+  toast("Prenotazione confermata! Riceverai un messaggio WhatsApp.", "success");
+  await aggiornaStato(res.lezioniRimanenti);
+}
+
+function apriModal(idPrenotazione, dataLeggibile, ora) {
+  idDaCancellare = idPrenotazione;
+  document.getElementById("modal-text").textContent =
+    `Vuoi cancellare la prenotazione del ${dataLeggibile} alle ${ora}? La lezione verrà riaccreditata al tuo pacchetto.`;
+  document.getElementById("btn-conferma-cancella").onclick = () => cancella(idPrenotazione);
+  document.getElementById("modal-overlay").classList.add("open");
+}
+
+function chiudiModal() {
+  document.getElementById("modal-overlay").classList.remove("open");
+  idDaCancellare = null;
+}
+
+async function cancella(idPrenotazione) {
+  chiudiModal();
+  const res = await apiPost({ action: "cancella", idPrenotazione });
+
+  if (res.error) { toast(res.error, "error"); return; }
+
+  toast("Prenotazione cancellata. La lezione è stata riaccreditata.", "success");
+  await aggiornaStato(res.lezioniRimanenti);
+}
+
+async function aggiornaStato(lezioniRimanenti) {
+  cliente.lezioniRimanenti = lezioniRimanenti;
+  [sessioni, prenotazioni] = await Promise.all([
+    api("getSessioni"),
+    api("getPrenotazioniCliente"),
+  ]);
+  renderCliente();
+  renderPrenotazioni();
+  renderSessioni();
+}
+
+// ─── UTILS ────────────────────────────────────────────────────
+function formatData(dateStr) {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString("it-IT", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function toast(msg, tipo = "") {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.className = `show ${tipo}`;
+  setTimeout(() => el.className = "", 3500);
+}
+
+// Chiudi modal cliccando fuori
+document.getElementById("modal-overlay").addEventListener("click", e => {
+  if (e.target === e.currentTarget) chiudiModal();
+});
+
+// ─── START ────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
