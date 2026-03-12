@@ -3,605 +3,404 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Omicron Studio — Prenota</title>
+  <title>Omicron Studio — Prenotazioni</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
   <style>
-    /* ─── VARIABILI ─────────────────────────────────────── */
     :root {
-      --bg:        #0d0d0f;
-      --surface:   #141418;
-      --border:    #2a2a32;
-      --accent:    #c8a96e;
-      --accent2:   #8b6f47;
-      --text:      #e8e4dc;
-      --muted:     #6b6870;
-      --danger:    #c0392b;
-      --success:   #27ae60;
-      --radius:    12px;
-      --ff-serif:  'Cormorant Garamond', Georgia, serif;
-      --ff-mono:   'DM Mono', monospace;
+      --bg:      #0d0d0f;
+      --surface: #141418;
+      --border:  #2a2a32;
+      --accent:  #c8a96e;
+      --accent2: #8b6f47;
+      --text:    #e8e4dc;
+      --muted:   #6b6870;
+      --danger:  #c0392b;
+      --success: #27ae60;
+      --r:       12px;
+      --serif:   'Cormorant Garamond', Georgia, serif;
+      --mono:    'DM Mono', monospace;
     }
-
-    /* ─── RESET ─────────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
     body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--ff-mono);
-      font-size: 14px;
-      font-weight: 300;
-      min-height: 100vh;
-      letter-spacing: 0.02em;
+      background: var(--bg); color: var(--text);
+      font-family: var(--mono); font-size: 14px; font-weight: 300;
+      min-height: 100vh; letter-spacing: 0.02em;
     }
+    .wrap { max-width: 620px; margin: 0 auto; padding: 0 20px 80px; }
 
-    /* ─── LAYOUT ─────────────────────────────────────────── */
-    .wrapper {
-      max-width: 640px;
-      margin: 0 auto;
-      padding: 0 20px 80px;
-    }
+    /* Header */
+    header { padding: 44px 0 32px; border-bottom: 1px solid var(--border); margin-bottom: 36px; }
+    .logo { font-family: var(--serif); font-size: 30px; font-weight: 300; letter-spacing: 0.12em; color: var(--accent); }
+    .logo b { font-weight: 600; }
+    .sub { color: var(--muted); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; margin-top: 4px; }
 
-    /* ─── HEADER ─────────────────────────────────────────── */
-    header {
-      padding: 48px 0 36px;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 40px;
+    /* Card cliente */
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r); padding: 22px 24px; margin-bottom: 32px;
+      display: flex; align-items: center; gap: 18px;
     }
-    .logo {
-      font-family: var(--ff-serif);
-      font-size: 32px;
-      font-weight: 300;
-      letter-spacing: 0.12em;
-      color: var(--accent);
-      line-height: 1;
-      margin-bottom: 6px;
-    }
-    .logo span { font-weight: 600; }
-    .tagline {
-      color: var(--muted);
-      font-size: 11px;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-    }
-
-    /* ─── CARD CLIENTE ───────────────────────────────────── */
-    .card-cliente {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 24px;
-      margin-bottom: 36px;
-      display: flex;
-      align-items: center;
-      gap: 20px;
-    }
-    .avatar {
-      width: 52px;
-      height: 52px;
-      border-radius: 50%;
+    .av {
+      width: 50px; height: 50px; border-radius: 50%; flex-shrink: 0;
       background: linear-gradient(135deg, var(--accent2), var(--accent));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: var(--ff-serif);
-      font-size: 22px;
-      color: var(--bg);
-      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--serif); font-size: 20px; color: var(--bg);
     }
-    .info-cliente h2 {
-      font-family: var(--ff-serif);
-      font-size: 22px;
-      font-weight: 400;
-      color: var(--text);
-      line-height: 1.2;
-    }
-    .pills {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-top: 8px;
-    }
+    .cn { font-family: var(--serif); font-size: 21px; font-weight: 400; line-height: 1.2; }
+    .pills { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 7px; }
     .pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      padding: 3px 10px;
-      border-radius: 20px;
-      font-size: 11px;
-      letter-spacing: 0.05em;
+      padding: 3px 10px; border-radius: 20px; font-size: 11px;
+      letter-spacing: 0.04em; display: inline-flex; align-items: center; gap: 4px;
     }
-    .pill-lezioni {
-      background: rgba(200, 169, 110, 0.12);
-      border: 1px solid rgba(200, 169, 110, 0.3);
-      color: var(--accent);
-    }
-    .pill-scadenza {
-      background: rgba(107, 104, 112, 0.15);
-      border: 1px solid var(--border);
-      color: var(--muted);
-    }
-    .pill-warning {
-      background: rgba(192, 57, 43, 0.12);
-      border: 1px solid rgba(192, 57, 43, 0.3);
-      color: #e74c3c;
-    }
+    .pill-g { background: rgba(200,169,110,.12); border: 1px solid rgba(200,169,110,.3); color: var(--accent); }
+    .pill-m { background: rgba(107,104,112,.15); border: 1px solid var(--border); color: var(--muted); }
+    .pill-w { background: rgba(192,57,43,.12); border: 1px solid rgba(192,57,43,.3); color: #e74c3c; }
 
-    /* ─── SEZIONE TITOLO ─────────────────────────────────── */
-    .section-header {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      margin-bottom: 20px;
-    }
-    .section-title {
-      font-family: var(--ff-serif);
-      font-size: 20px;
-      font-weight: 300;
-      letter-spacing: 0.06em;
-      color: var(--text);
-    }
-    .section-count {
-      font-size: 11px;
-      color: var(--muted);
-      letter-spacing: 0.1em;
-    }
+    /* Sezione */
+    .sh { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 16px; }
+    .st { font-family: var(--serif); font-size: 19px; font-weight: 300; letter-spacing: 0.06em; }
+    .sc { font-size: 11px; color: var(--muted); letter-spacing: 0.1em; }
+    .divider { height: 1px; background: var(--border); margin: 36px 0; }
 
-    /* ─── SLOT SESSIONE ──────────────────────────────────── */
-    .sessioni-list { display: flex; flex-direction: column; gap: 10px; }
+    /* Prenotazioni attive */
+    .pre-list { display: flex; flex-direction: column; gap: 8px; }
+    .pre-item {
+      background: rgba(200,169,110,.05); border: 1px solid rgba(200,169,110,.2);
+      border-radius: 8px; padding: 13px 16px;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    }
+    .pre-data { font-family: var(--serif); font-size: 16px; text-transform: capitalize; }
+    .pre-ora { font-size: 12px; color: var(--muted); margin-top: 2px; }
 
+    /* Slot */
+    .slot-list { display: flex; flex-direction: column; gap: 10px; }
     .slot {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 18px 20px;
-      display: grid;
-      grid-template-columns: 1fr auto;
-      align-items: center;
-      gap: 16px;
-      transition: border-color 0.2s, background 0.2s;
-      cursor: pointer;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r); padding: 17px 20px;
+      display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 14px;
+      transition: border-color .2s, background .2s;
     }
     .slot:hover { border-color: var(--accent2); background: #16161b; }
-    .slot.già-prenotato { border-color: rgba(200, 169, 110, 0.5); background: rgba(200, 169, 110, 0.04); }
-
-    .slot-data {
-      font-family: var(--ff-serif);
-      font-size: 17px;
-      font-weight: 400;
-      color: var(--text);
-      text-transform: capitalize;
-      margin-bottom: 4px;
-    }
-    .slot-meta {
-      color: var(--muted);
-      font-size: 12px;
-      display: flex;
-      gap: 14px;
-      align-items: center;
-    }
+    .slot.booked { border-color: rgba(200,169,110,.45); background: rgba(200,169,110,.04); }
+    .slot-d { font-family: var(--serif); font-size: 17px; font-weight: 400; text-transform: capitalize; margin-bottom: 4px; }
+    .slot-m { color: var(--muted); font-size: 12px; display: flex; gap: 12px; align-items: center; }
     .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--border); }
+    .slot-r { display: flex; flex-direction: column; align-items: flex-end; gap: 7px; }
+    .posti { display: flex; gap: 4px; }
+    .posto { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); opacity: .2; }
+    .posto.on { opacity: 1; }
 
-    .slot-action { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
-
-    .posti-indicator {
-      display: flex;
-      gap: 4px;
-    }
-    .posto {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: var(--accent);
-      opacity: 0.25;
-    }
-    .posto.occupato { opacity: 1; }
-
+    /* Buttons */
     .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 8px 18px;
-      border-radius: 8px;
-      font-family: var(--ff-mono);
-      font-size: 12px;
-      font-weight: 400;
-      letter-spacing: 0.08em;
-      cursor: pointer;
-      border: none;
-      transition: all 0.2s;
-      white-space: nowrap;
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 7px 16px; border-radius: 7px; font-family: var(--mono);
+      font-size: 12px; font-weight: 400; letter-spacing: 0.07em;
+      cursor: pointer; border: none; transition: all .2s; white-space: nowrap;
     }
-    .btn-primary {
-      background: var(--accent);
-      color: var(--bg);
-    }
-    .btn-primary:hover { background: #d4b87a; }
-    .btn-primary:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
-    .btn-danger {
-      background: transparent;
-      border: 1px solid rgba(192, 57, 43, 0.4);
-      color: #e74c3c;
-    }
-    .btn-danger:hover { background: rgba(192, 57, 43, 0.1); }
-    .btn-sm { padding: 6px 14px; font-size: 11px; }
+    .btn-p { background: var(--accent); color: var(--bg); }
+    .btn-p:hover { background: #d4b87a; }
+    .btn-p:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
+    .btn-d { background: transparent; border: 1px solid rgba(192,57,43,.4); color: #e74c3c; }
+    .btn-d:hover { background: rgba(192,57,43,.1); }
+    .btn-ok { background: rgba(200,169,110,.08); border: 1px solid rgba(200,169,110,.3); color: var(--accent); cursor: default; }
 
-    /* ─── MIE PRENOTAZIONI ───────────────────────────────── */
-    .prenotazioni-list { display: flex; flex-direction: column; gap: 8px; }
-    .prenotazione-item {
-      background: rgba(200, 169, 110, 0.05);
-      border: 1px solid rgba(200, 169, 110, 0.2);
-      border-radius: 8px;
-      padding: 14px 18px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-    }
-    .prenotazione-info {
-      font-family: var(--ff-serif);
-      font-size: 16px;
-      color: var(--text);
-      text-transform: capitalize;
-    }
-    .prenotazione-ora { font-family: var(--ff-mono); font-size: 12px; color: var(--muted); margin-top: 2px; }
-
-    /* ─── DIVIDER ────────────────────────────────────────── */
-    .divider {
-      height: 1px;
-      background: var(--border);
-      margin: 40px 0;
-    }
-
-    /* ─── TOAST ──────────────────────────────────────────── */
+    /* Toast */
     #toast {
-      position: fixed;
-      bottom: 24px;
-      left: 50%;
-      transform: translateX(-50%) translateY(20px);
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 14px 24px;
-      font-size: 13px;
-      color: var(--text);
-      opacity: 0;
-      transition: all 0.3s;
-      pointer-events: none;
-      z-index: 999;
-      max-width: 340px;
-      text-align: center;
+      position: fixed; bottom: 24px; left: 50%;
+      transform: translateX(-50%) translateY(16px);
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 13px 22px; font-size: 13px;
+      opacity: 0; transition: all .3s; pointer-events: none;
+      z-index: 999; max-width: 320px; text-align: center;
     }
     #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-    #toast.success { border-color: rgba(39, 174, 96, 0.4); color: #2ecc71; }
-    #toast.error { border-color: rgba(192, 57, 43, 0.4); color: #e74c3c; }
+    #toast.ok  { border-color: rgba(39,174,96,.4); color: #2ecc71; }
+    #toast.err { border-color: rgba(192,57,43,.4); color: #e74c3c; }
 
-    /* ─── LOADING ────────────────────────────────────────── */
-    .spinner {
-      width: 36px; height: 36px;
-      border: 2px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin: 60px auto;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .empty-state {
-      text-align: center;
-      padding: 40px 20px;
-      color: var(--muted);
-    }
-    .empty-state .icon { font-size: 32px; margin-bottom: 12px; }
-
-    /* ─── MODAL ──────────────────────────────────────────── */
-    .modal-overlay {
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,0.7);
+    /* Modal */
+    .ov {
+      position: fixed; inset: 0; background: rgba(0,0,0,.72);
       display: flex; align-items: center; justify-content: center;
-      z-index: 100;
-      opacity: 0; pointer-events: none;
-      transition: opacity 0.2s;
+      z-index: 100; opacity: 0; pointer-events: none; transition: opacity .2s;
     }
-    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .ov.open { opacity: 1; pointer-events: all; }
     .modal {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 32px;
-      max-width: 360px;
-      width: 90%;
-      transform: translateY(20px);
-      transition: transform 0.2s;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 28px; max-width: 340px; width: 90%;
+      transform: translateY(16px); transition: transform .2s;
     }
-    .modal-overlay.open .modal { transform: translateY(0); }
-    .modal h3 { font-family: var(--ff-serif); font-size: 22px; margin-bottom: 8px; }
-    .modal p { color: var(--muted); font-size: 13px; margin-bottom: 24px; line-height: 1.6; }
-    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+    .ov.open .modal { transform: translateY(0); }
+    .modal h3 { font-family: var(--serif); font-size: 21px; margin-bottom: 8px; }
+    .modal p { color: var(--muted); font-size: 13px; margin-bottom: 22px; line-height: 1.6; }
+    .ma { display: flex; gap: 9px; justify-content: flex-end; }
 
-    @media (max-width: 480px) {
-      .card-cliente { flex-direction: column; align-items: flex-start; }
+    /* Spinner */
+    .spin {
+      width: 32px; height: 32px; border: 2px solid var(--border);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: sp .8s linear infinite; margin: 50px auto;
+    }
+    @keyframes sp { to { transform: rotate(360deg); } }
+    .empty { text-align: center; padding: 36px; color: var(--muted); }
+    .empty .ic { font-size: 28px; margin-bottom: 10px; }
+
+    @media(max-width:480px) {
+      .card { flex-direction: column; align-items: flex-start; }
       .slot { grid-template-columns: 1fr; }
-      .slot-action { flex-direction: row; align-items: center; justify-content: space-between; }
+      .slot-r { flex-direction: row; align-items: center; justify-content: space-between; }
     }
   </style>
 </head>
 <body>
-
-<div class="wrapper">
+<div class="wrap">
   <header>
-    <div class="logo"><span>OMICRON</span> STUDIO</div>
-    <div class="tagline">Personal Training · Napoli</div>
+    <div class="logo"><b>OMICRON</b> STUDIO</div>
+    <div class="sub">Personal Training · Napoli</div>
   </header>
 
-  <!-- Stato cliente -->
   <div id="card-cliente"></div>
 
-  <!-- Prenotazioni attive -->
-  <div id="section-prenotazioni" style="display:none;">
-    <div class="section-header">
-      <div class="section-title">Le mie prenotazioni</div>
-    </div>
-    <div id="lista-prenotazioni" class="prenotazioni-list"></div>
+  <div id="sec-pre" style="display:none">
+    <div class="sh"><div class="st">Le mie prenotazioni</div></div>
+    <div id="lista-pre" class="pre-list"></div>
     <div class="divider"></div>
   </div>
 
-  <!-- Sessioni disponibili -->
-  <div class="section-header">
-    <div class="section-title">Sessioni disponibili</div>
-    <div class="section-count" id="count-sessioni"></div>
+  <div class="sh">
+    <div class="st">Sessioni disponibili</div>
+    <div class="sc" id="cnt"></div>
   </div>
-  <div id="lista-sessioni" class="sessioni-list">
-    <div class="spinner"></div>
-  </div>
+  <div id="lista-slot" class="slot-list"><div class="spin"></div></div>
 </div>
 
-<!-- Toast -->
 <div id="toast"></div>
 
-<!-- Modal conferma cancellazione -->
-<div class="modal-overlay" id="modal-overlay">
+<div class="ov" id="ov">
   <div class="modal">
     <h3>Cancella prenotazione</h3>
-    <p id="modal-text">Sei sicuro di voler cancellare questa prenotazione? La lezione verrà riaccreditata al tuo pacchetto.</p>
-    <div class="modal-actions">
-      <button class="btn btn-sm" onclick="chiudiModal()">Annulla</button>
-      <button class="btn btn-danger btn-sm" id="btn-conferma-cancella">Cancella</button>
+    <p id="modal-txt">Sei sicuro? La lezione verrà riaccreditata al tuo pacchetto.</p>
+    <div class="ma">
+      <button class="btn" style="border:1px solid var(--border)" onclick="chiudiModal()">Annulla</button>
+      <button class="btn btn-d" id="btn-ok-cancella">Conferma</button>
     </div>
   </div>
 </div>
 
 <script>
-// ─── CONFIGURAZIONE ─────────────────────────────────────────
-// SOSTITUISCI con il tuo URL Apps Script dopo il deploy
-const BACKEND_URL = "https://script.google.com/macros/s/AKfycbze7rw6mBllcajni3Szj9q_JXV4OCgCbTQD7nCjAt-5DvJQB4GlOhxMi0So80kINasdMA/exec";
+// ─── CONFIGURAZIONE ──────────────────────────────────────────────────────────
+// Sostituisci con il tuo URL Apps Script dopo il deploy
+const BACKEND_URL = "BACKEND_URL === "https://script.google.com/macros/s/AKfycbze7rw6mBllcajni3Szj9q_JXV4OCgCbTQD7nCjAt-5DvJQB4GlOhxMi0So80kINasdMA/exec") {";
 
-// Il token viene letto dall'URL: tuosito.com/prenota.html?t=TOKEN_CLIENTE
-const token = new URLSearchParams(window.location.search).get("t");
+// Token dal parametro URL: cliente.html?t=TOKEN
+const TOKEN = new URLSearchParams(window.location.search).get("t") || "";
 
-// ─── STATO ───────────────────────────────────────────────────
-let cliente = null;
-let sessioni = [];
-let prenotazioni = [];
-let idDaCancellare = null;
+// ─── STATO ───────────────────────────────────────────────────────────────────
+let cliente = null, sessioni = [], prenotazioni = [];
 
-// ─── INIT ─────────────────────────────────────────────────────
+// ─── JSONP — unico metodo affidabile con Apps Script cross-origin ─────────────
+function jsonp(url) {
+  return new Promise((resolve, reject) => {
+    const cb = "_cb_" + Date.now() + "_" + Math.floor(Math.random()*9999);
+    const script = document.createElement("script");
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error("Timeout — controlla l'URL del backend"));
+    }, 10000);
+
+    window[cb] = (data) => { cleanup(); resolve(data); };
+
+    function cleanup() {
+      clearTimeout(timer);
+      delete window[cb];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }
+
+    script.onerror = () => { cleanup(); reject(new Error("Errore di rete")); };
+    script.src = url + (url.includes("?") ? "&" : "?") + "callback=" + cb;
+    document.head.appendChild(script);
+  });
+}
+
+function get(action) {
+  return jsonp(BACKEND_URL + "?action=" + action + "&token=" + encodeURIComponent(TOKEN));
+}
+
+// Per le azioni POST usiamo ancora fetch (prenota/cancella)
+// Apps Script accetta POST senza problemi CORS quando la risposta è JSON semplice
+async function post(body) {
+  try {
+    const res = await fetch(BACKEND_URL, {
+      method: "POST",
+      body: JSON.stringify({ ...body, token: TOKEN }),
+    });
+    return await res.json();
+  } catch(e) {
+    // Fallback JSONP anche per le azioni semplici se fetch fallisce
+    return jsonp(BACKEND_URL + "?action=" + body.action +
+      "&token=" + encodeURIComponent(TOKEN) +
+      (body.idSessione    ? "&idSessione="    + body.idSessione    : "") +
+      (body.idPrenotazione? "&idPrenotazione=" + body.idPrenotazione: ""));
+  }
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
 async function init() {
-  if (!token) {
-    document.getElementById("card-cliente").innerHTML = `
-      <div class="empty-state">
-        <div class="icon">🔒</div>
-        <div>Link non valido. Contatta lo studio.</div>
-      </div>`;
+  if (!TOKEN) {
+    document.getElementById("card-cliente").innerHTML =
+      `<div class="empty"><div class="ic">🔒</div>Link non valido.<br>Contatta lo studio.</div>`;
+    document.getElementById("lista-slot").innerHTML = "";
+    return;
+  }
+
+  if (BACKEND_URL === "INSERISCI_QUI_URL_APPS_SCRIPT") {
+    document.getElementById("lista-slot").innerHTML =
+      `<div class="empty"><div class="ic">⚙️</div>Backend non configurato.<br>Sostituisci BACKEND_URL nel codice.</div>`;
     return;
   }
 
   try {
-    [cliente, sessioni, prenotazioni] = await Promise.all([
-      api("getCliente"),
-      api("getSessioni"),
-      api("getPrenotazioniCliente"),
+    const [c, s, p] = await Promise.all([
+      get("getCliente"),
+      get("getSessioni"),
+      get("getPrenotazioni"),
     ]);
-
-    if (cliente.error) throw new Error(cliente.error);
-
+    if (c.error) throw new Error(c.error);
+    cliente = c; sessioni = s; prenotazioni = Array.isArray(p) ? p : [];
     renderCliente();
     renderPrenotazioni();
     renderSessioni();
-  } catch (e) {
-    document.getElementById("lista-sessioni").innerHTML = `
-      <div class="empty-state">
-        <div class="icon">⚠️</div>
-        <div>${e.message}</div>
-      </div>`;
+  } catch(e) {
+    document.getElementById("lista-slot").innerHTML =
+      `<div class="empty"><div class="ic">⚠️</div>${e.message}</div>`;
   }
 }
 
-// ─── API ──────────────────────────────────────────────────────
-async function api(action, extra = {}) {
-  const url = `${BACKEND_URL}?action=${action}&token=${token}`;
-  const res = await fetch(url, {
-    redirect: 'follow',
-    method: 'GET',
-  });
-  return res.json();
-};
-}
-
-async function apiPost(body) {
-  const res = await fetch(BACKEND_URL, {
-    method: 'POST',
-    redirect: 'follow',
-    body: JSON.stringify({ ...body, token }),
-  });
-  return res.json();
-}
-}
-
-// ─── RENDER CLIENTE ───────────────────────────────────────────
+// ─── RENDER ───────────────────────────────────────────────────────────────────
 function renderCliente() {
-  const iniziali = (cliente.nome[0] + cliente.cognome[0]).toUpperCase();
-  const scadenza = new Date(cliente.dataScadenza);
-  const oggi = new Date();
-  const giorniRimanenti = Math.ceil((scadenza - oggi) / (1000*60*60*24));
-  const poche = cliente.lezioniRimanenti <= 2;
+  const ini  = (cliente.nome[0] + cliente.cognome[0]).toUpperCase();
+  const scad = new Date(cliente.dataScad);
+  const gg   = Math.ceil((scad - new Date()) / 864e5);
+  const warn = cliente.lezioniRim <= 2;
+  const warnS= gg <= 7;
 
   document.getElementById("card-cliente").innerHTML = `
-    <div class="card-cliente">
-      <div class="avatar">${iniziali}</div>
-      <div class="info-cliente">
-        <h2>${cliente.nome} ${cliente.cognome}</h2>
+    <div class="card">
+      <div class="av">${ini}</div>
+      <div>
+        <div class="cn">${cliente.nome} ${cliente.cognome}</div>
         <div class="pills">
-          <span class="pill ${poche ? 'pill-warning' : 'pill-lezioni'}">
-            💪 ${cliente.lezioniRimanenti} lezioni rimanenti
-          </span>
-          <span class="pill ${giorniRimanenti <= 7 ? 'pill-warning' : 'pill-scadenza'}">
-            📅 scade ${formatData(cliente.dataScadenza)}
-          </span>
+          <span class="pill ${warn ? 'pill-w' : 'pill-g'}">💪 ${cliente.lezioniRim} lezioni rimanenti</span>
+          <span class="pill ${warnS ? 'pill-w' : 'pill-m'}">📅 scade ${fmtData(cliente.dataScad)}</span>
         </div>
       </div>
     </div>`;
 }
 
-// ─── RENDER PRENOTAZIONI ──────────────────────────────────────
 function renderPrenotazioni() {
-  const section = document.getElementById("section-prenotazioni");
-  const lista = document.getElementById("lista-prenotazioni");
-
-  if (!prenotazioni.length) { section.style.display = "none"; return; }
-  section.style.display = "block";
-
-  const prenotateIds = new Set(prenotazioni.map(p => {
-    const s = sessioni.find(s => {
-      return s.data === p.dataSessione && s.oraInizio === p.ora;
-    });
-    return s ? s.id : null;
-  }));
-
-  lista.innerHTML = prenotazioni.map(p => `
-    <div class="prenotazione-item">
+  const sec  = document.getElementById("sec-pre");
+  const list = document.getElementById("lista-pre");
+  if (!prenotazioni.length) { sec.style.display = "none"; return; }
+  sec.style.display = "block";
+  list.innerHTML = prenotazioni.map(p => `
+    <div class="pre-item">
       <div>
-        <div class="prenotazione-info">${p.dataLeggibile}</div>
-        <div class="prenotazione-ora">🕐 ${p.ora}</div>
+        <div class="pre-data">${p.dataLabel}</div>
+        <div class="pre-ora">🕐 ${p.ora}</div>
       </div>
-      <button class="btn btn-danger btn-sm" onclick="apriModal('${p.id}', '${p.dataLeggibile}', '${p.ora}')">
-        Cancella
-      </button>
+      <button class="btn btn-d" style="font-size:11px;padding:6px 13px"
+        onclick="apriModal('${p.id}','${p.dataLabel}','${p.ora}')">Cancella</button>
     </div>`).join("");
 }
 
-// ─── RENDER SESSIONI ──────────────────────────────────────────
 function renderSessioni() {
-  const lista = document.getElementById("lista-sessioni");
-  const prenotateDate = new Set(prenotazioni.map(p => p.dataSessione + "_" + p.ora));
-
+  const list = document.getElementById("lista-slot");
   if (!sessioni.length) {
-    lista.innerHTML = `<div class="empty-state"><div class="icon">📅</div><div>Nessuna sessione disponibile al momento.</div></div>`;
+    list.innerHTML = `<div class="empty"><div class="ic">📅</div>Nessuna sessione disponibile.</div>`;
     return;
   }
+  document.getElementById("cnt").textContent = sessioni.length + " disponibili";
 
-  document.getElementById("count-sessioni").textContent = `${sessioni.length} disponibili`;
+  const preSet = new Set(prenotazioni.map(p => p.idSessione));
 
-  lista.innerHTML = sessioni.map(s => {
-    const prenotata = prenotateDate.has(s.data + "_" + s.oraInizio);
-    const postiOccupati = s.postiTotali - s.postiLiberi;
-
-    const posti = Array.from({ length: s.postiTotali }, (_, i) =>
-      `<div class="posto ${i < postiOccupati ? 'occupato' : ''}"></div>`).join("");
+  list.innerHTML = sessioni.map(s => {
+    const booked   = preSet.has(s.id);
+    const occupati = s.postiTotali - s.postiLiberi;
+    const posti    = Array.from({length: s.postiTotali}, (_,i) =>
+      `<div class="posto ${i < occupati ? 'on' : ''}"></div>`).join("");
 
     return `
-    <div class="slot ${prenotata ? 'già-prenotato' : ''}">
+    <div class="slot ${booked ? 'booked' : ''}">
       <div>
-        <div class="slot-data">${s.dataLeggibile}</div>
-        <div class="slot-meta">
+        <div class="slot-d">${s.dataLabel}</div>
+        <div class="slot-m">
           <span>🕐 ${s.oraInizio} – ${s.oraFine}</span>
           <div class="dot"></div>
-          <span>${s.postiLiberi} ${s.postiLiberi === 1 ? 'posto libero' : 'posti liberi'}</span>
+          <span>${s.postiLiberi} ${s.postiLiberi===1?'posto libero':'posti liberi'}</span>
         </div>
       </div>
-      <div class="slot-action">
-        <div class="posti-indicator">${posti}</div>
-        ${prenotata
-          ? `<button class="btn btn-sm" disabled style="color:var(--accent);border:1px solid rgba(200,169,110,0.3);background:rgba(200,169,110,0.08)">✓ Prenotata</button>`
-          : `<button class="btn btn-primary btn-sm" onclick="prenota('${s.id}')">Prenota</button>`
+      <div class="slot-r">
+        <div class="posti">${posti}</div>
+        ${booked
+          ? `<button class="btn btn-ok" disabled>✓ Prenotata</button>`
+          : `<button class="btn btn-p" style="font-size:11px;padding:6px 14px"
+               onclick="prenota('${s.id}',this)">Prenota</button>`
         }
       </div>
     </div>`;
   }).join("");
 }
 
-// ─── AZIONI ───────────────────────────────────────────────────
-async function prenota(idSessione) {
-  const btn = event.target;
-  btn.disabled = true;
-  btn.textContent = "...";
-
-  const res = await apiPost({ action: "prenota", idSessione });
-
+// ─── AZIONI ───────────────────────────────────────────────────────────────────
+async function prenota(idSessione, btn) {
+  btn.disabled = true; btn.textContent = "...";
+  const res = await post({ action: "prenota", idSessione });
   if (res.error) {
-    toast(res.error, "error");
-    btn.disabled = false;
-    btn.textContent = "Prenota";
+    toast(res.error, "err");
+    btn.disabled = false; btn.textContent = "Prenota";
     return;
   }
-
-  toast("Prenotazione confermata! Riceverai un messaggio WhatsApp.", "success");
-  await aggiornaStato(res.lezioniRimanenti);
+  toast("Prenotazione confermata! 🎉", "ok");
+  cliente.lezioniRim = res.lezioniRimanenti;
+  const [s, p] = await Promise.all([get("getSessioni"), get("getPrenotazioni")]);
+  sessioni = s; prenotazioni = Array.isArray(p) ? p : [];
+  renderCliente(); renderPrenotazioni(); renderSessioni();
 }
 
-function apriModal(idPrenotazione, dataLeggibile, ora) {
-  idDaCancellare = idPrenotazione;
-  document.getElementById("modal-text").textContent =
-    `Vuoi cancellare la prenotazione del ${dataLeggibile} alle ${ora}? La lezione verrà riaccreditata al tuo pacchetto.`;
-  document.getElementById("btn-conferma-cancella").onclick = () => cancella(idPrenotazione);
-  document.getElementById("modal-overlay").classList.add("open");
+let _idCanc = null;
+function apriModal(id, dataLabel, ora) {
+  _idCanc = id;
+  document.getElementById("modal-txt").textContent =
+    `Vuoi cancellare il ${dataLabel} alle ${ora}? La lezione verrà riaccreditata.`;
+  document.getElementById("btn-ok-cancella").onclick = () => cancella(id);
+  document.getElementById("ov").classList.add("open");
 }
+function chiudiModal() { document.getElementById("ov").classList.remove("open"); }
 
-function chiudiModal() {
-  document.getElementById("modal-overlay").classList.remove("open");
-  idDaCancellare = null;
-}
-
-async function cancella(idPrenotazione) {
+async function cancella(id) {
   chiudiModal();
-  const res = await apiPost({ action: "cancella", idPrenotazione });
-
-  if (res.error) { toast(res.error, "error"); return; }
-
-  toast("Prenotazione cancellata. La lezione è stata riaccreditata.", "success");
-  await aggiornaStato(res.lezioniRimanenti);
+  const res = await post({ action: "cancella", idPrenotazione: id });
+  if (res.error) { toast(res.error, "err"); return; }
+  toast("Prenotazione cancellata. Lezione riaccreditata.", "ok");
+  cliente.lezioniRim = res.lezioniRimanenti;
+  const [s, p] = await Promise.all([get("getSessioni"), get("getPrenotazioni")]);
+  sessioni = s; prenotazioni = Array.isArray(p) ? p : [];
+  renderCliente(); renderPrenotazioni(); renderSessioni();
 }
 
-async function aggiornaStato(lezioniRimanenti) {
-  cliente.lezioniRimanenti = lezioniRimanenti;
-  [sessioni, prenotazioni] = await Promise.all([
-    api("getSessioni"),
-    api("getPrenotazioniCliente"),
-  ]);
-  renderCliente();
-  renderPrenotazioni();
-  renderSessioni();
+// ─── UTILS ────────────────────────────────────────────────────────────────────
+function fmtData(str) {
+  return new Date(str).toLocaleDateString("it-IT", {day:"numeric", month:"short", year:"numeric"});
 }
-
-// ─── UTILS ────────────────────────────────────────────────────
-function formatData(dateStr) {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString("it-IT", { day: "numeric", month: "short", year: "numeric" });
-}
-
-function toast(msg, tipo = "") {
+function toast(msg, tipo) {
   const el = document.getElementById("toast");
-  el.textContent = msg;
-  el.className = `show ${tipo}`;
+  el.textContent = msg; el.className = "show " + (tipo||"");
   setTimeout(() => el.className = "", 3500);
 }
-
-// Chiudi modal cliccando fuori
-document.getElementById("modal-overlay").addEventListener("click", e => {
+document.getElementById("ov").addEventListener("click", e => {
   if (e.target === e.currentTarget) chiudiModal();
 });
 
-// ─── START ────────────────────────────────────────────────────
 init();
 </script>
 </body>
