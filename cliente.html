@@ -420,16 +420,22 @@ async function init() {
 // ─── API ──────────────────────────────────────────────────────
 async function api(action, extra = {}) {
   const url = `${BACKEND_URL}?action=${action}&token=${token}`;
-  const res = await fetch(url);
+  const res = await fetch(url, {
+    redirect: 'follow',
+    method: 'GET',
+  });
   return res.json();
+};
 }
 
 async function apiPost(body) {
   const res = await fetch(BACKEND_URL, {
-    method: "POST",
+    method: 'POST',
+    redirect: 'follow',
     body: JSON.stringify({ ...body, token }),
   });
   return res.json();
+}
 }
 
 // ─── RENDER CLIENTE ───────────────────────────────────────────
