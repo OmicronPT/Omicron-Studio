@@ -1,522 +1,638 @@
 // ============================================================
 //  OMICRON STUDIO — Sistema Prenotazioni
-//  Google Apps Script — Backend Completo
-//  Versione 1.0
-// ============================================================
-//
-//  SETUP INIZIALE:
-//  1. Apri il tuo Google Sheet
-//  2. Vai su Estensioni > Apps Script
-//  3. Incolla questo codice
-//  4. Modifica le costanti nella sezione CONFIGURAZIONE
-//  5. Salva e clicca su "Esegui" > setupSheet() per creare i fogli
-//  6. Vai su Deploy > Nuova distribuzione > Web App
-//     - Esegui come: Me
-//     - Chi ha accesso: Chiunque
-//  7. Copia l'URL generato — è il tuo backend endpoint
-//
-// ============================================================
-
-// ============================================================
-//  CONFIGURAZIONE — modifica questi valori
+//  Google Apps Script — Backend v5.0
+//  Slot automatici 30min, 9:00-20:00, lun-ven
 // ============================================================
 
 const CONFIG = {
-  SPREADSHEET_ID: SpreadsheetApp.getActiveSpreadsheet().getId(),
-  
-  // Il tuo numero WhatsApp per ricevere notifiche admin (formato internazionale, es. 393331234567)
-  ADMIN_WHATSAPP: "39XXXXXXXXXX",
-  
-  // API Key CallMeBot — registrati su https://www.callmebot.com/blog/free-api-whatsapp-messages/
-  CALLMEBOT_API_KEY: "XXXXXXXX",
-  
-  // Nome del tuo studio
-  STUDIO_NAME: "Omicron Studio",
-  
-  // Ore prima dell'allenamento per inviare il reminder
-  ORE_REMINDER: 20,
-  
-  // Soglia lezioni rimanenti per avviso scadenza pacchetto
-  SOGLIA_AVVISO_LEZIONI: 2,
+  STUDIO_NAME:        "Omicron Studio",
+  ADMIN_WHATSAPP:     "39XXXXXXXXXX",
+  CALLMEBOT_API_KEY:  "",
+  ORE_REMINDER:       18,
+  SOGLIA_AVVISO:      2,
+  MAX_CONTEMPORANEI:  3,     // max persone contemporanee
+  DURATA_SLOT_MIN:    30,    // durata slot in minuti
+  DURATA_SESSION_MIN: 60,    // durata sessione in minuti (= 2 slot)
+  ORE_CANCELLAZIONE:  2,
+  ORA_INIZIO:         9,     // 09:00
+  ORA_FINE:           20,    // 20:00 (ultimo slot inizia alle 19:00 per durata 60min)
+  SETTIMANE_AVANTI:   4,     // quante settimane mostrare
+  ADMIN_PASSWORD:     "omicron2024",
 };
 
-// ============================================================
-//  NOMI DEI FOGLI
-// ============================================================
-
-const SHEETS = {
-  CLIENTI: "Clienti",
-  SESSIONI: "Sessioni",
-  PRENOTAZIONI: "Prenotazioni",
-  PACCHETTI: "Pacchetti",
-};
-
-// ============================================================
-//  SETUP — crea la struttura del Google Sheet
-// ============================================================
-
+// ──────────────────────────────────────────────────────────
+//  SETUP
+// ──────────────────────────────────────────────────────────
 function setupSheet() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-
-  // Crea o ottieni i fogli
-  _getOrCreateSheet(ss, SHEETS.CLIENTI, [
-    "ID", "Nome", "Cognome", "Telefono", "Email",
-    "Tipo Pacchetto", "Lezioni Totali", "Lezioni Rimanenti",
-    "Data Inizio", "Data Scadenza", "Stato", "Token Prenotazione"
+  _creaFoglio(ss, "Clienti", [
+    "ID","Nome","Cognome","Telefono","Email",
+    "Pacchetto","Lezioni Totali","Lezioni Rimanenti",
+    "Data Inizio","Data Scadenza","Stato","Token",
+    "Data Nascita","Sesso","Indirizzo","Instagram","Facebook","Note Anamnesi"
   ]);
-
-  _getOrCreateSheet(ss, SHEETS.SESSIONI, [
-    "ID", "Data", "Ora Inizio", "Ora Fine",
-    "Posti Totali", "Posti Occupati", "Stato", "Note"
+  _creaFoglio(ss, "Prenotazioni", [
+    "ID","ID Cliente","Nome Cliente","Data","Ora Inizio","Ora Fine",
+    "Data Prenotazione","Stato"
   ]);
-
-  _getOrCreateSheet(ss, SHEETS.PRENOTAZIONI, [
-    "ID", "ID Cliente", "Nome Cliente", "ID Sessione",
-    "Data Sessione", "Ora", "Data Prenotazione", "Stato", "Lezione Scalata"
+  _creaFoglio(ss, "Blocchi", [
+    "ID","Data","Ora Inizio","Ora Fine","Motivo","Creato Il"
   ]);
-
-  _getOrCreateSheet(ss, SHEETS.PACCHETTI, [
-    "ID", "Nome", "N° Lezioni", "Durata Giorni", "Prezzo", "Note"
+  _creaFoglio(ss, "Pacchetti", [
+    "ID","Nome","Lezioni","Durata Giorni","Prezzo","Note"
   ]);
-
-  // Inserisce pacchetti di esempio
-  const shPacchetti = ss.getSheetByName(SHEETS.PACCHETTI);
-  if (shPacchetti.getLastRow() <= 1) {
-    const esempi = [
-      ["PKG001", "Singola", 1, 30, 40, "Lezione singola"],
-      ["PKG002", "Pacchetto 10", 10, 90, 350, "10 lezioni, validità 90 giorni"],
-      ["PKG003", "Pacchetto 20", 20, 180, 600, "20 lezioni, validità 6 mesi"],
-      ["PKG004", "Abbonamento Mensile", 12, 30, 180, "Circa 3 sessioni/settimana"],
-    ];
-    shPacchetti.getRange(2, 1, esempi.length, esempi[0].length).setValues(esempi);
+  const shP = ss.getSheetByName("Pacchetti");
+  if (shP.getLastRow() <= 1) {
+    shP.getRange(2,1,4,6).setValues([
+      ["PKG001","Singola",1,30,40,""],
+      ["PKG002","Pacchetto 10",10,90,350,""],
+      ["PKG003","Pacchetto 20",20,180,600,""],
+      ["PKG004","Mensile",12,30,180,"~3 sessioni/settimana"],
+    ]);
   }
-
-  SpreadsheetApp.getUi().alert("Setup completato! Fogli creati correttamente.");
+  SpreadsheetApp.getUi().alert("Setup completato!");
 }
 
-function _getOrCreateSheet(ss, name, headers) {
-  let sheet = ss.getSheetByName(name);
-  if (!sheet) {
-    sheet = ss.insertSheet(name);
+function _creaFoglio(ss, nome, headers) {
+  let sh = ss.getSheetByName(nome);
+  if (!sh) sh = ss.insertSheet(nome);
+  if (sh.getLastRow() === 0) {
+    const r = sh.getRange(1,1,1,headers.length);
+    r.setValues([headers]);
+    r.setBackground("#1a1a2e").setFontColor("#ffffff").setFontWeight("bold");
+    sh.setFrozenRows(1);
   }
-  if (sheet.getLastRow() === 0) {
-    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-    sheet.getRange(1, 1, 1, headers.length)
-      .setBackground("#1a1a2e")
-      .setFontColor("#ffffff")
-      .setFontWeight("bold");
-    sheet.setFrozenRows(1);
-  }
-  return sheet;
+  return sh;
 }
 
-// ============================================================
-//  WEB APP — gestisce le richieste HTTP dal frontend
-// ============================================================
-
+// ──────────────────────────────────────────────────────────
+//  WEB APP
+// ──────────────────────────────────────────────────────────
 function doGet(e) {
-  const action = e.parameter.action;
-  const token = e.parameter.token;
+  const action   = e.parameter.action   || "";
+  const token    = e.parameter.token    || "";
+  const callback = e.parameter.callback || "";
+  const pw       = e.parameter.pw       || "";
 
+  let result;
   try {
     switch (action) {
-      case "getSessioni":
-        return _jsonResponse(getSessioniDisponibili());
-      case "getCliente":
-        return _jsonResponse(getClienteByToken(token));
-      case "getPrenotazioniCliente":
-        return _jsonResponse(getPrenotazioniCliente(token));
-      default:
-        return _jsonResponse({ error: "Azione non riconosciuta" });
+      case "getSlotDisponibili":   result = getSlotDisponibili(token);       break;
+      case "getCliente":           result = getClienteByToken(token);        break;
+      case "getPrenotazioni":      result = getPrenotazioniCliente(token);   break;
+      case "adminLogin":           result = adminLogin(pw);                  break;
+      case "adminDashboard":       result = adminDashboard(pw);              break;
+      case "adminClienti":         result = adminClienti(pw);                break;
+      case "adminCalendario":      result = adminCalendario(pw);             break;
+      case "adminBlocchi":         result = adminBlocchi(pw);                break;
+      case "adminPacchetti":       result = getPacchetti();                  break;
+      default: result = { error: "Azione non riconosciuta: " + action };
     }
-  } catch (err) {
-    return _jsonResponse({ error: err.message });
+  } catch(err) {
+    result = { error: err.message };
   }
+
+  const json = JSON.stringify(result);
+  if (callback) {
+    return ContentService.createTextOutput(callback+"("+json+")")
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+  return ContentService.createTextOutput(json).setMimeType(ContentService.MimeType.JSON);
 }
 
 function doPost(e) {
-  const data = JSON.parse(e.postData.contents);
-  const action = data.action;
+  let data = {};
+  try { data = JSON.parse(e.postData.contents); } catch(_) {}
+  const pw = data.pw || "";
 
+  let result;
   try {
-    switch (action) {
-      case "prenota":
-        return _jsonResponse(prenotaSessione(data.token, data.idSessione));
-      case "cancella":
-        return _jsonResponse(cancellaPrenotazione(data.token, data.idPrenotazione));
-      default:
-        return _jsonResponse({ error: "Azione non riconosciuta" });
+    switch (data.action) {
+      case "prenota":                   result = prenotaSlot(data.token, data.data, data.oraInizio);    break;
+      case "cancella":                  result = cancellaPrenotazione(data.token, data.idPrenotazione); break;
+      case "adminAddBlocco":            result = adminAddBlocco(pw, data);                              break;
+      case "adminDelBlocco":            result = adminDelBlocco(pw, data.id);                           break;
+      case "adminAddCliente":           result = adminAddCliente(pw, data);                             break;
+      case "adminEditCliente":          result = adminEditCliente(pw, data);                            break;
+      case "adminDelCliente":           result = adminDelCliente(pw, data.id);                          break;
+      case "adminCancellaPrenotazione": result = adminCancellaPrenotazione(pw, data.id);                break;
+      default: result = { error: "Azione non riconosciuta" };
     }
-  } catch (err) {
-    return _jsonResponse({ error: err.message });
+  } catch(err) {
+    result = { error: err.message };
   }
+
+  return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
 }
 
-function _jsonResponse(data) {
-  return ContentService
-    .createTextOutput(JSON.stringify(data))
-    .setMimeType(ContentService.MimeType.JSON);
+// ──────────────────────────────────────────────────────────
+//  LOGICA SLOT
+// ──────────────────────────────────────────────────────────
+
+// Converte "HH:MM" in minuti dall'inizio della giornata
+function _oreToMin(ora) {
+  const [h,m] = ora.split(":").map(Number);
+  return h * 60 + m;
 }
 
-// ============================================================
-//  SESSIONI
-// ============================================================
+// Converte minuti in "HH:MM"
+function _minToOre(min) {
+  return String(Math.floor(min/60)).padStart(2,"0") + ":" + String(min%60).padStart(2,"0");
+}
 
-function getSessioniDisponibili() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(SHEETS.SESSIONI);
-  const data = sheet.getDataRange().getValues();
+// Genera tutti gli slot teorici del giorno (array di "HH:MM")
+function _slotDelGiorno() {
+  const slots = [];
+  const fine = (CONFIG.ORA_FINE - CONFIG.DURATA_SESSION_MIN / 60) * 60; // ultimo inizio possibile
+  for (let m = CONFIG.ORA_INIZIO * 60; m <= fine; m += CONFIG.DURATA_SLOT_MIN) {
+    slots.push(_minToOre(m));
+  }
+  return slots;
+}
+
+// Verifica se una data è un giorno feriale (lun-ven)
+function _isFeriale(dateStr) {
+  const d = new Date(dateStr + "T12:00:00");
+  const dow = d.getDay(); // 0=dom, 6=sab
+  return dow >= 1 && dow <= 5;
+}
+
+// Conta quante prenotazioni attive si sovrappongono a un dato slot
+// Un slot occupa [oraInizio, oraInizio + DURATA_SESSION_MIN)
+function _conteggioSovrapposti(dateStr, oraInizio, prenotazioni) {
+  const startMin = _oreToMin(oraInizio);
+  const endMin   = startMin + CONFIG.DURATA_SESSION_MIN;
+
+  return prenotazioni.filter(p => {
+    if (p.data !== dateStr || p.stato === "Cancellata") return false;
+    const pStart = _oreToMin(p.oraInizio);
+    const pEnd   = pStart + CONFIG.DURATA_SESSION_MIN;
+    // Sovrapposizione se gli intervalli si intersecano
+    return pStart < endMin && pEnd > startMin;
+  }).length;
+}
+
+// Verifica se uno slot è bloccato
+function _isBloccat(dateStr, oraInizio, blocchi) {
+  const startMin = _oreToMin(oraInizio);
+  const endMin   = startMin + CONFIG.DURATA_SESSION_MIN;
+
+  return blocchi.some(b => {
+    if (b.data !== dateStr) return false;
+    // Blocco giornata intera
+    if (!b.oraInizio && !b.oraFine) return true;
+    const bStart = _oreToMin(b.oraInizio || "00:00");
+    const bEnd   = b.oraFine ? _oreToMin(b.oraFine) : 24*60;
+    return bStart < endMin && bEnd > startMin;
+  });
+}
+
+// Restituisce gli slot disponibili per le prossime SETTIMANE_AVANTI settimane
+// Se token è passato, esclude slot già prenotati da quel cliente
+function getSlotDisponibili(token) {
+  const tz   = Session.getScriptTimeZone();
   const oggi = new Date();
-  oggi.setHours(0, 0, 0, 0);
+  oggi.setHours(0,0,0,0);
 
-  const sessioni = [];
-  for (let i = 1; i < data.length; i++) {
-    const row = data[i];
-    const dataSessione = new Date(row[1]);
-    const postiOccupati = parseInt(row[5]) || 0;
-    const postiTotali = parseInt(row[4]) || 3;
-    const stato = row[6];
+  const fine = new Date(oggi);
+  fine.setDate(fine.getDate() + CONFIG.SETTIMANE_AVANTI * 7);
 
-    if (dataSessione >= oggi && stato !== "Cancellata" && postiOccupati < postiTotali) {
-      sessioni.push({
-        id: row[0],
-        data: Utilities.formatDate(dataSessione, Session.getScriptTimeZone(), "yyyy-MM-dd"),
-        dataLeggibile: Utilities.formatDate(dataSessione, Session.getScriptTimeZone(), "EEEE d MMMM yyyy"),
-        oraInizio: row[2],
-        oraFine: row[3],
-        postiLiberi: postiTotali - postiOccupati,
-        postiTotali: postiTotali,
+  const prenotazioni = _tuttePrenotazioni();
+  const blocchi      = _tuttiBlocchi();
+  const slotsGiorno  = _slotDelGiorno();
+
+  // Prenotazioni del cliente corrente (per marcarle)
+  let preClienteSet = new Set();
+  if (token) {
+    const cliente = getClienteByToken(token);
+    if (!cliente.error) {
+      prenotazioni
+        .filter(p => p.idCliente === cliente.id && p.stato === "Confermata")
+        .forEach(p => preClienteSet.add(p.data + "_" + p.oraInizio));
+    }
+  }
+
+  const risultato = [];
+  for (let d = new Date(oggi); d < fine; d.setDate(d.getDate()+1)) {
+    const dateStr = d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+    if (!_isFeriale(dateStr)) continue;
+
+    const slotsGiornata = [];
+    for (const ora of slotsGiorno) {
+      if (_isBloccat(dateStr, ora, blocchi)) continue;
+      const count = _conteggioSovrapposti(dateStr, ora, prenotazioni);
+      if (count >= CONFIG.MAX_CONTEMPORANEI) continue;
+
+      slotsGiornata.push({
+        ora,
+        oraFine: _minToOre(_oreToMin(ora) + CONFIG.DURATA_SESSION_MIN),
+        postiLiberi: CONFIG.MAX_CONTEMPORANEI - count,
+        prenotato: preClienteSet.has(dateStr + "_" + ora),
+      });
+    }
+
+    if (slotsGiornata.length > 0) {
+      risultato.push({
+        data: dateStr,
+        dataLabel: Utilities.formatDate(d, tz, "EEEE d MMMM yyyy"),
+        slots: slotsGiornata,
       });
     }
   }
-  return sessioni;
+  return risultato;
 }
 
-// Aggiunge una nuova sessione (usato dal pannello admin)
-function aggiungiSessione(data, oraInizio, oraFine, postiTotali, note) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(SHEETS.SESSIONI);
-  const id = "SES" + Date.now();
-  sheet.appendRow([id, data, oraInizio, oraFine, postiTotali || 3, 0, "Disponibile", note || ""]);
-  return { success: true, id };
-}
-
-// ============================================================
-//  CLIENTI
-// ============================================================
-
-function getClienteByToken(token) {
-  const clienti = _getAllClienti();
-  const cliente = clienti.find(c => c.token === token);
-  if (!cliente) return { error: "Token non valido" };
-  return cliente;
-}
-
-function _getAllClienti() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(SHEETS.CLIENTI);
-  const data = sheet.getDataRange().getValues();
-  const clienti = [];
-  for (let i = 1; i < data.length; i++) {
-    const row = data[i];
-    if (!row[0]) continue;
-    clienti.push({
-      id: row[0],
-      nome: row[1],
-      cognome: row[2],
-      telefono: row[3],
-      email: row[4],
-      tipoPacchetto: row[5],
-      lezioniTotali: row[6],
-      lezioniRimanenti: row[7],
-      dataInizio: row[8] ? Utilities.formatDate(new Date(row[8]), Session.getScriptTimeZone(), "yyyy-MM-dd") : "",
-      dataScadenza: row[9] ? Utilities.formatDate(new Date(row[9]), Session.getScriptTimeZone(), "yyyy-MM-dd") : "",
-      stato: row[10],
-      token: row[11],
-      _riga: i + 1,
-    });
-  }
-  return clienti;
-}
-
-// Genera un token univoco per il link di prenotazione del cliente
-function generaTokenCliente(idCliente) {
-  return Utilities.base64Encode(idCliente + "_" + Date.now()).replace(/[^a-zA-Z0-9]/g, "").substring(0, 16);
-}
-
-// Aggiunge un nuovo cliente (usato dal pannello admin)
-function aggiungiCliente(nome, cognome, telefono, email, idPacchetto) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const shClienti = ss.getSheetByName(SHEETS.CLIENTI);
-  const shPacchetti = ss.getSheetByName(SHEETS.PACCHETTI);
-
-  const pacchetti = shPacchetti.getDataRange().getValues();
-  const pacchetto = pacchetti.find(p => p[0] === idPacchetto);
-  if (!pacchetto) return { error: "Pacchetto non trovato" };
-
-  const id = "CLI" + Date.now();
-  const token = generaTokenCliente(id);
-  const oggi = new Date();
-  const scadenza = new Date();
-  scadenza.setDate(scadenza.getDate() + parseInt(pacchetto[3]));
-
-  shClienti.appendRow([
-    id, nome, cognome, telefono, email,
-    pacchetto[1], pacchetto[2], pacchetto[2],
-    Utilities.formatDate(oggi, Session.getScriptTimeZone(), "yyyy-MM-dd"),
-    Utilities.formatDate(scadenza, Session.getScriptTimeZone(), "yyyy-MM-dd"),
-    "Attivo", token
-  ]);
-
-  return { success: true, id, token };
-}
-
-// ============================================================
+// ──────────────────────────────────────────────────────────
 //  PRENOTAZIONI
-// ============================================================
-
-function prenotaSessione(token, idSessione) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+// ──────────────────────────────────────────────────────────
+function prenotaSlot(token, data, oraInizio) {
+  const ss      = SpreadsheetApp.getActiveSpreadsheet();
   const cliente = getClienteByToken(token);
-  if (cliente.error) return cliente;
+  if (cliente.error)              return cliente;
+  if (cliente.stato !== "Attivo") return { error: "Abbonamento non attivo." };
+  if (cliente.lezioniRim <= 0)    return { error: "Nessuna lezione rimanente." };
+  if (cliente.dataScad && new Date(cliente.dataScad) < new Date()) return { error: "Pacchetto scaduto." };
 
-  // Controlla stato cliente
-  if (cliente.stato !== "Attivo") return { error: "Il tuo abbonamento non è attivo." };
-  if (cliente.lezioniRimanenti <= 0) return { error: "Non hai lezioni rimanenti nel tuo pacchetto." };
+  const prenotazioni = _tuttePrenotazioni();
+  const blocchi      = _tuttiBlocchi();
 
-  const oggi = new Date();
-  if (cliente.dataScadenza && new Date(cliente.dataScadenza) < oggi) {
-    return { error: "Il tuo pacchetto è scaduto. Contatta lo studio per rinnovarlo." };
-  }
+  if (_isBloccat(data, oraInizio, blocchi)) return { error: "Orario non disponibile." };
 
-  // Controlla sessione
-  const shSessioni = ss.getSheetByName(SHEETS.SESSIONI);
-  const dataSessioni = shSessioni.getDataRange().getValues();
-  let sessRiga = -1;
-  let sessData = null;
+  const count = _conteggioSovrapposti(data, oraInizio, prenotazioni);
+  if (count >= CONFIG.MAX_CONTEMPORANEI) return { error: "Slot al completo." };
 
-  for (let i = 1; i < dataSessioni.length; i++) {
-    if (dataSessioni[i][0] === idSessione) {
-      sessRiga = i + 1;
-      sessData = dataSessioni[i];
-      break;
-    }
-  }
+  // Già prenotato?
+  const già = prenotazioni.find(p =>
+    p.idCliente === cliente.id && p.data === data &&
+    p.oraInizio === oraInizio && p.stato !== "Cancellata"
+  );
+  if (già) return { error: "Hai già prenotato questo slot." };
 
-  if (sessRiga === -1) return { error: "Sessione non trovata." };
+  const id     = "PRE" + Date.now();
+  const tz     = Session.getScriptTimeZone();
+  const oraFine= _minToOre(_oreToMin(oraInizio) + CONFIG.DURATA_SESSION_MIN);
+  const now    = Utilities.formatDate(new Date(), tz, "yyyy-MM-dd HH:mm");
 
-  const postiOccupati = parseInt(sessData[5]) || 0;
-  const postiTotali = parseInt(sessData[4]) || 3;
-  if (postiOccupati >= postiTotali) return { error: "Sessione al completo." };
-  if (sessData[6] === "Cancellata") return { error: "Questa sessione è stata cancellata." };
-
-  // Controlla se già prenotato
-  const shPrenotazioni = ss.getSheetByName(SHEETS.PRENOTAZIONI);
-  const dataPrenotazioni = shPrenotazioni.getDataRange().getValues();
-  for (let i = 1; i < dataPrenotazioni.length; i++) {
-    if (dataPrenotazioni[i][1] === cliente.id && dataPrenotazioni[i][3] === idSessione && dataPrenotazioni[i][7] !== "Cancellata") {
-      return { error: "Sei già prenotato per questa sessione." };
-    }
-  }
-
-  // Tutto ok — crea prenotazione
-  const idPrenotazione = "PRE" + Date.now();
-  const dataSessione = new Date(sessData[1]);
-  const dataLeggibile = Utilities.formatDate(dataSessione, Session.getScriptTimeZone(), "EEEE d MMMM");
-
-  shPrenotazioni.appendRow([
-    idPrenotazione, cliente.id, `${cliente.nome} ${cliente.cognome}`,
-    idSessione, sessData[1], sessData[2],
-    Utilities.formatDate(oggi, Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm"),
-    "Confermata", "Sì"
+  ss.getSheetByName("Prenotazioni").appendRow([
+    id, cliente.id, cliente.nome+" "+cliente.cognome,
+    data, oraInizio, oraFine, now, "Confermata"
   ]);
 
   // Scala lezione
-  const shClienti = ss.getSheetByName(SHEETS.CLIENTI);
-  shClienti.getRange(cliente._riga, 8).setValue(cliente.lezioniRimanenti - 1);
+  ss.getSheetByName("Clienti").getRange(cliente._riga, 8).setValue(cliente.lezioniRim - 1);
 
-  // Aggiorna posti occupati
-  shSessioni.getRange(sessRiga, 6).setValue(postiOccupati + 1);
+  // WhatsApp
+  const dl = Utilities.formatDate(new Date(data+"T12:00:00"), tz, "EEEE d MMMM");
+  _wa(cliente.telefono, `✅ *${CONFIG.STUDIO_NAME}*\nCiao ${cliente.nome}! Prenotazione confermata.\n📅 ${dl} ore ${oraInizio}\nLezioni rimanenti: ${cliente.lezioniRim-1}`);
+  if (cliente.lezioniRim-1 <= CONFIG.SOGLIA_AVVISO && cliente.lezioniRim-1 > 0)
+    _wa(cliente.telefono, `⚠️ *${CONFIG.STUDIO_NAME}*\nCiao ${cliente.nome}, rimangono solo *${cliente.lezioniRim-1} lezioni*. Contattaci!`);
 
-  // Manda WhatsApp di conferma
-  const msgCliente = `✅ *${CONFIG.STUDIO_NAME}*\nCiao ${cliente.nome}! La tua prenotazione è confermata.\n📅 ${dataLeggibile}\n🕐 ${sessData[2]} - ${sessData[3]}\nLezioni rimanenti: ${cliente.lezioniRimanenti - 1}`;
-  _inviaWhatsApp(cliente.telefono, msgCliente);
-
-  // Avviso scadenza pacchetto
-  if (cliente.lezioniRimanenti - 1 <= CONFIG.SOGLIA_AVVISO_LEZIONI && cliente.lezioniRimanenti - 1 > 0) {
-    const msgAvviso = `⚠️ *${CONFIG.STUDIO_NAME}*\nCiao ${cliente.nome}, ti ricordiamo che hai solo *${cliente.lezioniRimanenti - 1} lezioni* rimanenti nel tuo pacchetto. Contattaci per rinnovarlo!`;
-    _inviaWhatsApp(cliente.telefono, msgAvviso);
-  }
-
-  return { success: true, idPrenotazione, lezioniRimanenti: cliente.lezioniRimanenti - 1 };
+  return { ok: true, idPrenotazione: id, lezioniRimanenti: cliente.lezioniRim-1 };
 }
 
 function cancellaPrenotazione(token, idPrenotazione) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss      = SpreadsheetApp.getActiveSpreadsheet();
   const cliente = getClienteByToken(token);
   if (cliente.error) return cliente;
 
-  const shPrenotazioni = ss.getSheetByName(SHEETS.PRENOTAZIONI);
-  const data = shPrenotazioni.getDataRange().getValues();
-  let pRiga = -1;
-  let pData = null;
-
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === idPrenotazione && data[i][1] === cliente.id) {
-      pRiga = i + 1;
-      pData = data[i];
-      break;
-    }
+  const shPre = ss.getSheetByName("Prenotazioni");
+  const rows  = shPre.getDataRange().getValues();
+  let pRiga=-1, p=null;
+  for (let i=1; i<rows.length; i++) {
+    if (rows[i][0]===idPrenotazione && rows[i][1]===cliente.id) { pRiga=i+1; p=rows[i]; break; }
   }
+  if (!p)                  return { error: "Prenotazione non trovata." };
+  if (p[7]==="Cancellata") return { error: "Già cancellata." };
 
-  if (pRiga === -1) return { error: "Prenotazione non trovata." };
-  if (pData[7] === "Cancellata") return { error: "Prenotazione già cancellata." };
+  const dataS = new Date(p[3]+"T"+p[4]);
+  if ((dataS - new Date()) < CONFIG.ORE_CANCELLAZIONE * 3600000)
+    return { error: `Impossibile cancellare meno di ${CONFIG.ORE_CANCELLAZIONE}h prima.` };
 
-  // Controlla limite cancellazione (es. almeno 2 ore prima)
-  const dataSessione = new Date(pData[4]);
-  const ora = pData[5].toString();
-  const [h, m] = ora.split(":").map(Number);
-  dataSessione.setHours(h, m, 0, 0);
-  const diff = (dataSessione - new Date()) / (1000 * 60 * 60);
-  if (diff < 2) return { error: "Non è possibile cancellare meno di 2 ore prima della sessione." };
+  shPre.getRange(pRiga, 8).setValue("Cancellata");
+  ss.getSheetByName("Clienti").getRange(cliente._riga, 8).setValue(cliente.lezioniRim + 1);
 
-  // Cancella
-  shPrenotazioni.getRange(pRiga, 8).setValue("Cancellata");
-
-  // Restituisci lezione
-  const shClienti = ss.getSheetByName(SHEETS.CLIENTI);
-  shClienti.getRange(cliente._riga, 8).setValue(cliente.lezioniRimanenti + 1);
-
-  // Riduci posti occupati nella sessione
-  const shSessioni = ss.getSheetByName(SHEETS.SESSIONI);
-  const dataSessioni = shSessioni.getDataRange().getValues();
-  for (let i = 1; i < dataSessioni.length; i++) {
-    if (dataSessioni[i][0] === pData[3]) {
-      const occupati = Math.max(0, parseInt(dataSessioni[i][5]) - 1);
-      shSessioni.getRange(i + 1, 6).setValue(occupati);
-      break;
-    }
-  }
-
-  const msg = `❌ *${CONFIG.STUDIO_NAME}*\nCiao ${cliente.nome}, la tua prenotazione del ${Utilities.formatDate(new Date(pData[4]), Session.getScriptTimeZone(), "d MMMM")} alle ${pData[5]} è stata cancellata.\nLa lezione è stata riaccreditata al tuo pacchetto.`;
-  _inviaWhatsApp(cliente.telefono, msg);
-
-  return { success: true, lezioniRimanenti: cliente.lezioniRimanenti + 1 };
+  const tz = Session.getScriptTimeZone();
+  _wa(cliente.telefono, `❌ *${CONFIG.STUDIO_NAME}*\nPrenotazione del ${Utilities.formatDate(new Date(p[3]+"T12:00:00"),tz,"d MMMM")} alle ${p[4]} cancellata. Lezione riaccreditata.`);
+  return { ok: true, lezioniRimanenti: cliente.lezioniRim+1 };
 }
 
 function getPrenotazioniCliente(token) {
   const cliente = getClienteByToken(token);
   if (cliente.error) return cliente;
 
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(SHEETS.PRENOTAZIONI);
-  const data = sheet.getDataRange().getValues();
-  const oggi = new Date();
-  oggi.setHours(0, 0, 0, 0);
+  const tz   = Session.getScriptTimeZone();
+  const oggi = new Date(); oggi.setHours(0,0,0,0);
 
-  const prenotazioni = [];
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][1] === cliente.id && data[i][7] !== "Cancellata") {
-      const dataS = new Date(data[i][4]);
-      if (dataS >= oggi) {
-        prenotazioni.push({
-          id: data[i][0],
-          dataSessione: Utilities.formatDate(dataS, Session.getScriptTimeZone(), "yyyy-MM-dd"),
-          dataLeggibile: Utilities.formatDate(dataS, Session.getScriptTimeZone(), "EEEE d MMMM yyyy"),
-          ora: data[i][5],
-          stato: data[i][7],
-        });
-      }
-    }
-  }
-  return prenotazioni;
+  return _tuttePrenotazioni()
+    .filter(p => p.idCliente===cliente.id && p.stato!=="Cancellata" && new Date(p.data+"T12:00:00")>=oggi)
+    .map(p => ({
+      id: p.id,
+      data: p.data,
+      dataLabel: Utilities.formatDate(new Date(p.data+"T12:00:00"), tz, "EEEE d MMMM yyyy"),
+      oraInizio: p.oraInizio,
+      oraFine:   p.oraFine,
+    }));
 }
 
-// ============================================================
-//  REMINDER AUTOMATICI — da attivare come trigger giornaliero
-// ============================================================
-
-function inviaReminderGiornalieri() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const shPrenotazioni = ss.getSheetByName(SHEETS.PRENOTAZIONI);
-  const shClienti = ss.getSheetByName(SHEETS.CLIENTI);
-
-  const prenotazioni = shPrenotazioni.getDataRange().getValues();
-  const clienti = _getAllClienti();
-  const domani = new Date();
-  domani.setDate(domani.getDate() + 1);
-  domani.setHours(0, 0, 0, 0);
-  const dopodomani = new Date(domani);
-  dopodomani.setDate(dopodomani.getDate() + 1);
-
-  for (let i = 1; i < prenotazioni.length; i++) {
-    const row = prenotazioni[i];
-    if (row[7] !== "Confermata") continue;
-
-    const dataS = new Date(row[4]);
-    dataS.setHours(0, 0, 0, 0);
-
-    if (dataS >= domani && dataS < dopodomani) {
-      const cliente = clienti.find(c => c.id === row[1]);
-      if (!cliente) continue;
-
-      const msg = `🔔 *Reminder ${CONFIG.STUDIO_NAME}*\nCiao ${cliente.nome}! Ti ricordiamo il tuo allenamento di domani:\n📅 ${row[5]} - ${row[5]}\nA domani! 💪`;
-      _inviaWhatsApp(cliente.telefono, msg);
-    }
+function _tuttePrenotazioni() {
+  const rows = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Prenotazioni").getDataRange().getValues();
+  const out  = [];
+  for (let i=1; i<rows.length; i++) {
+    const r = rows[i]; if (!r[0]) continue;
+    out.push({
+      id: r[0], idCliente: r[1], nomeCliente: r[2],
+      data: r[3] ? _dateToStr(new Date(r[3])) : "",
+      oraInizio: r[4], oraFine: r[5],
+      stato: r[7], _riga: i+1,
+    });
   }
+  return out;
 }
 
-// Controlla pacchetti in scadenza (da eseguire settimanalmente)
-function controllaPackettiInScadenza() {
-  const clienti = _getAllClienti();
-  const oggi = new Date();
-  const tra7giorni = new Date();
-  tra7giorni.setDate(oggi.getDate() + 7);
+function _dateToStr(d) {
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
 
-  clienti.forEach(c => {
-    if (c.stato !== "Attivo") return;
-    const scadenza = new Date(c.dataScadenza);
-    if (scadenza <= tra7giorni && scadenza >= oggi) {
-      const msg = `⚠️ *${CONFIG.STUDIO_NAME}*\nCiao ${cliente.nome}! Il tuo pacchetto scade il *${c.dataScadenza}*.\nHai ancora *${c.lezioniRimanenti} lezioni* da utilizzare.\nContattaci per rinnovare! 💪`;
-      _inviaWhatsApp(c.telefono, msg);
+// ──────────────────────────────────────────────────────────
+//  BLOCCHI
+// ──────────────────────────────────────────────────────────
+function _tuttiBlocchi() {
+  const rows = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Blocchi").getDataRange().getValues();
+  const out  = [];
+  for (let i=1; i<rows.length; i++) {
+    const r = rows[i]; if (!r[0]) continue;
+    out.push({
+      id: r[0],
+      data: r[1] ? _dateToStr(new Date(r[1])) : "",
+      oraInizio: r[2]||"", oraFine: r[3]||"",
+      motivo: r[4]||"", _riga: i+1,
+    });
+  }
+  return out;
+}
+
+function adminBlocchi(pw) {
+  _checkAdmin(pw);
+  return _tuttiBlocchi();
+}
+
+function adminAddBlocco(pw, data) {
+  _checkAdmin(pw);
+  if (!data.data) return { error: "Data obbligatoria" };
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const id = "BLK" + Date.now();
+  const tz = Session.getScriptTimeZone();
+  ss.getSheetByName("Blocchi").appendRow([
+    id, data.data, data.oraInizio||"", data.oraFine||"",
+    data.motivo||"",
+    Utilities.formatDate(new Date(), tz, "yyyy-MM-dd HH:mm")
+  ]);
+  return { ok: true, id };
+}
+
+function adminDelBlocco(pw, id) {
+  _checkAdmin(pw);
+  const ss=SpreadsheetApp.getActiveSpreadsheet(), sh=ss.getSheetByName("Blocchi"), rows=sh.getDataRange().getValues();
+  for (let i=1; i<rows.length; i++) {
+    if (rows[i][0]===id) { sh.deleteRow(i+1); return { ok: true }; }
+  }
+  return { error: "Blocco non trovato" };
+}
+
+// ──────────────────────────────────────────────────────────
+//  ADMIN — DASHBOARD
+// ──────────────────────────────────────────────────────────
+function adminDashboard(pw) {
+  _checkAdmin(pw);
+  const tz   = Session.getScriptTimeZone();
+  const oggi = new Date(); oggi.setHours(0,0,0,0);
+  const tra7 = new Date(oggi); tra7.setDate(tra7.getDate()+7);
+
+  const clienti      = _tuttiClienti();
+  const prenotazioni = _tuttePrenotazioni();
+
+  const oggiStr  = _dateToStr(oggi);
+  const preOggi  = prenotazioni.filter(p => p.data===oggiStr && p.stato==="Confermata");
+  const inScadenza   = clienti.filter(c => { if(c.stato!=="Attivo")return false; const s=new Date(c.dataScad); return s>=oggi&&s<=tra7; });
+  const pocheLezioni = clienti.filter(c => c.stato==="Attivo"&&c.lezioniRim<=CONFIG.SOGLIA_AVVISO&&c.lezioniRim>0);
+
+  // Conta slot unici oggi
+  const slotsOggi = new Set(preOggi.map(p=>p.oraInizio)).size;
+
+  return {
+    ok: true,
+    stats: {
+      clientiAttivi:    clienti.filter(c=>c.stato==="Attivo").length,
+      slotsOggi,
+      prenotazioniOggi: preOggi.length,
+      inScadenza:       inScadenza.length,
+    },
+    prenotazioniOggi: preOggi,
+    inScadenza,
+    pocheLezioni,
+  };
+}
+
+// ──────────────────────────────────────────────────────────
+//  ADMIN — CALENDARIO
+// ──────────────────────────────────────────────────────────
+function adminCalendario(pw) {
+  _checkAdmin(pw);
+  const tz   = Session.getScriptTimeZone();
+  const oggi = new Date(); oggi.setHours(0,0,0,0);
+  const fine = new Date(oggi); fine.setDate(fine.getDate() + CONFIG.SETTIMANE_AVANTI * 7);
+
+  const prenotazioni = _tuttePrenotazioni();
+  const blocchi      = _tuttiBlocchi();
+  const slotsGiorno  = _slotDelGiorno();
+  const risultato    = [];
+
+  for (let d = new Date(oggi); d < fine; d.setDate(d.getDate()+1)) {
+    const dateStr = _dateToStr(d);
+    if (!_isFeriale(dateStr)) continue;
+
+    const bloccatoTutto = blocchi.some(b => b.data===dateStr && !b.oraInizio && !b.oraFine);
+    const preGiorno = prenotazioni.filter(p => p.data===dateStr && p.stato==="Confermata");
+
+    // Raggruppa prenotazioni per slot
+    const slotsInfo = slotsGiorno.map(ora => {
+      const count     = _conteggioSovrapposti(dateStr, ora, prenotazioni);
+      const bloccato  = _isBloccat(dateStr, ora, blocchi);
+      const preSlot   = prenotazioni.filter(p =>
+        p.data===dateStr && p.stato==="Confermata" &&
+        _oreToMin(p.oraInizio) <= _oreToMin(ora) &&
+        _oreToMin(p.oraInizio) + CONFIG.DURATA_SESSION_MIN > _oreToMin(ora)
+      );
+      return { ora, count, bloccato, clienti: preSlot.map(p=>p.nomeCliente) };
+    }).filter(s => s.count > 0 || s.bloccato);
+
+    risultato.push({
+      data: dateStr,
+      dataLabel: Utilities.formatDate(new Date(dateStr+"T12:00:00"), tz, "EEEE d MMMM yyyy"),
+      bloccatoTutto,
+      nPrenotazioni: preGiorno.length,
+      slots: slotsInfo,
+      blocchi: blocchi.filter(b=>b.data===dateStr),
+    });
+  }
+  return risultato;
+}
+
+// ──────────────────────────────────────────────────────────
+//  AUTH
+// ──────────────────────────────────────────────────────────
+function _checkAdmin(pw) {
+  if (pw !== CONFIG.ADMIN_PASSWORD) throw new Error("Password non valida");
+}
+function adminLogin(pw) {
+  return pw===CONFIG.ADMIN_PASSWORD ? {ok:true} : {error:"Password non valida"};
+}
+
+// ──────────────────────────────────────────────────────────
+//  CLIENTI
+// ──────────────────────────────────────────────────────────
+function adminClienti(pw) { _checkAdmin(pw); return _tuttiClienti(); }
+
+function adminAddCliente(pw, data) {
+  _checkAdmin(pw);
+  if (!data.nome||!data.cognome||!data.idPacchetto) return { error: "Dati mancanti" };
+  return aggiungiCliente(data);
+}
+
+function adminEditCliente(pw, data) {
+  _checkAdmin(pw);
+  const ss=SpreadsheetApp.getActiveSpreadsheet(), sh=ss.getSheetByName("Clienti"), rows=sh.getDataRange().getValues();
+  for (let i=1; i<rows.length; i++) {
+    if (rows[i][0]===data.id) {
+      if (data.nome         !== undefined) sh.getRange(i+1,2).setValue(data.nome);
+      if (data.cognome      !== undefined) sh.getRange(i+1,3).setValue(data.cognome);
+      if (data.telefono     !== undefined) sh.getRange(i+1,4).setValue(data.telefono);
+      if (data.email        !== undefined) sh.getRange(i+1,5).setValue(data.email);
+      if (data.lezioniRim   !== undefined) sh.getRange(i+1,8).setValue(data.lezioniRim);
+      if (data.dataScad     !== undefined) sh.getRange(i+1,10).setValue(data.dataScad);
+      if (data.stato        !== undefined) sh.getRange(i+1,11).setValue(data.stato);
+      if (data.dataNascita  !== undefined) sh.getRange(i+1,13).setValue(data.dataNascita);
+      if (data.sesso        !== undefined) sh.getRange(i+1,14).setValue(data.sesso);
+      if (data.indirizzo    !== undefined) sh.getRange(i+1,15).setValue(data.indirizzo);
+      if (data.instagram    !== undefined) sh.getRange(i+1,16).setValue(data.instagram);
+      if (data.facebook     !== undefined) sh.getRange(i+1,17).setValue(data.facebook);
+      if (data.noteAnamnesi !== undefined) sh.getRange(i+1,18).setValue(data.noteAnamnesi);
+      return { ok: true };
     }
+  }
+  return { error: "Cliente non trovato" };
+}
+
+function adminDelCliente(pw, id) {
+  _checkAdmin(pw);
+  const ss=SpreadsheetApp.getActiveSpreadsheet(), sh=ss.getSheetByName("Clienti"), rows=sh.getDataRange().getValues();
+  for (let i=1; i<rows.length; i++) { if(rows[i][0]===id){ sh.getRange(i+1,11).setValue("Eliminato"); return {ok:true}; } }
+  return { error: "Cliente non trovato" };
+}
+
+function adminCancellaPrenotazione(pw, id) {
+  _checkAdmin(pw);
+  const ss=SpreadsheetApp.getActiveSpreadsheet(), sh=ss.getSheetByName("Prenotazioni"), rows=sh.getDataRange().getValues();
+  for (let i=1; i<rows.length; i++) {
+    if (rows[i][0]===id) {
+      sh.getRange(i+1,8).setValue("Cancellata");
+      const c=_tuttiClienti().find(x=>x.id===rows[i][1]);
+      if (c) ss.getSheetByName("Clienti").getRange(c._riga,8).setValue(c.lezioniRim+1);
+      return { ok: true };
+    }
+  }
+  return { error: "Prenotazione non trovata" };
+}
+
+function getClienteByToken(token) {
+  if (!token) return { error: "Token mancante" };
+  const c = _tuttiClienti().find(x=>x.token===token);
+  return c || { error: "Token non valido" };
+}
+
+function _tuttiClienti() {
+  const ss=SpreadsheetApp.getActiveSpreadsheet(), rows=ss.getSheetByName("Clienti").getDataRange().getValues(), tz=Session.getScriptTimeZone(), out=[];
+  for (let i=1; i<rows.length; i++) {
+    const r=rows[i]; if(!r[0]) continue;
+    out.push({
+      id:r[0], nome:r[1], cognome:r[2], telefono:r[3], email:r[4],
+      pacchetto:r[5], lezioniTot:parseInt(r[6])||0, lezioniRim:parseInt(r[7])||0,
+      dataInizio:r[8]?Utilities.formatDate(new Date(r[8]),tz,"yyyy-MM-dd"):"",
+      dataScad:r[9]?Utilities.formatDate(new Date(r[9]),tz,"yyyy-MM-dd"):"",
+      stato:r[10], token:r[11],
+      dataNascita:r[12]||"", sesso:r[13]||"", indirizzo:r[14]||"",
+      instagram:r[15]||"", facebook:r[16]||"", noteAnamnesi:r[17]||"",
+      _riga:i+1,
+    });
+  }
+  return out;
+}
+
+function getPacchetti() {
+  const rows=SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Pacchetti").getDataRange().getValues(), out=[];
+  for (let i=1; i<rows.length; i++) { if(!rows[i][0])continue; out.push({id:rows[i][0],nome:rows[i][1],lezioni:rows[i][2],durata:rows[i][3],prezzo:rows[i][4]}); }
+  return out;
+}
+
+function aggiungiCliente(data) {
+  const ss=SpreadsheetApp.getActiveSpreadsheet(), shC=ss.getSheetByName("Clienti"), shP=ss.getSheetByName("Pacchetti"), tz=Session.getScriptTimeZone();
+  const pkg=shP.getDataRange().getValues().find(r=>r[0]===data.idPacchetto);
+  if (!pkg) return { error:"Pacchetto non trovato: "+data.idPacchetto };
+  const id="CLI"+Date.now();
+  const token=Utilities.base64Encode(id+Math.random()).replace(/[^a-zA-Z0-9]/g,"").substring(0,20);
+  const oggi=new Date(), scad=new Date(); scad.setDate(scad.getDate()+parseInt(pkg[3]));
+  shC.appendRow([
+    id, data.nome, data.cognome, data.telefono||"", data.email||"",
+    pkg[1], pkg[2], pkg[2],
+    Utilities.formatDate(oggi,tz,"yyyy-MM-dd"),
+    Utilities.formatDate(scad,tz,"yyyy-MM-dd"),
+    "Attivo", token,
+    data.dataNascita||"", data.sesso||"", data.indirizzo||"",
+    data.instagram||"", data.facebook||"", data.noteAnamnesi||""
+  ]);
+  const link="https://OmicronPT.github.io/Omicron-Studio/cliente.html?t="+token;
+  Logger.log("Cliente: "+data.nome+" "+data.cognome+" | Link: "+link);
+  return { ok:true, id, token, link };
+}
+
+// ──────────────────────────────────────────────────────────
+//  TRIGGER
+// ──────────────────────────────────────────────────────────
+function inviaReminder() {
+  const tz     = Session.getScriptTimeZone();
+  const domani = new Date(); domani.setDate(domani.getDate()+1);
+  const domaniStr = _dateToStr(domani);
+  const clienti   = _tuttiClienti();
+  _tuttePrenotazioni()
+    .filter(p => p.data===domaniStr && p.stato==="Confermata")
+    .forEach(p => {
+      const c = clienti.find(x=>x.id===p.idCliente);
+      if (c) _wa(c.telefono, `🔔 *Reminder ${CONFIG.STUDIO_NAME}*\nCiao ${c.nome}! Ti aspettiamo domani alle ${p.oraInizio} 💪`);
+    });
+}
+
+function controllaScadenze() {
+  const oggi=new Date(), tra7=new Date(); tra7.setDate(oggi.getDate()+7);
+  _tuttiClienti().forEach(c => {
+    if(c.stato!=="Attivo")return;
+    const scad=new Date(c.dataScad);
+    if(scad>=oggi&&scad<=tra7)
+      _wa(c.telefono,`⚠️ *${CONFIG.STUDIO_NAME}*\nCiao ${c.nome}! Pacchetto in scadenza il *${c.dataScad}* con ${c.lezioniRim} lezioni. Contattaci!`);
   });
 }
 
-// ============================================================
-//  WHATSAPP — CallMeBot
-// ============================================================
-
-function _inviaWhatsApp(numero, messaggio) {
-  try {
-    const url = `https://api.callmebot.com/whatsapp.php?phone=${numero}&text=${encodeURIComponent(messaggio)}&apikey=${CONFIG.CALLMEBOT_API_KEY}`;
-    UrlFetchApp.fetch(url);
-  } catch (e) {
-    Logger.log("Errore WhatsApp: " + e.message);
-  }
+function setupTriggers() {
+  ScriptApp.getProjectTriggers().forEach(t=>ScriptApp.deleteTrigger(t));
+  ScriptApp.newTrigger("inviaReminder").timeBased().everyDays(1).atHour(CONFIG.ORE_REMINDER).create();
+  ScriptApp.newTrigger("controllaScadenze").timeBased().onWeekDay(ScriptApp.WeekDay.MONDAY).atHour(9).create();
+  SpreadsheetApp.getUi().alert("Trigger attivati!");
 }
 
-// ============================================================
-//  SETUP TRIGGER — esegui una volta sola dopo il deploy
-// ============================================================
-
-function setupTriggers() {
-  // Rimuovi trigger esistenti
-  ScriptApp.getProjectTriggers().forEach(t => ScriptApp.deleteTrigger(t));
-
-  // Reminder giornaliero alle 18:00
-  ScriptApp.newTrigger("inviaReminderGiornalieri")
-    .timeBased()
-    .everyDays(1)
-    .atHour(18)
-    .create();
-
-  // Controllo pacchetti ogni lunedì mattina
-  ScriptApp.newTrigger("controllaPackettiInScadenza")
-    .timeBased()
-    .onWeekDay(ScriptApp.WeekDay.MONDAY)
-    .atHour(9)
-    .create();
-
-  SpreadsheetApp.getUi().alert("Trigger configurati correttamente!");
+// ──────────────────────────────────────────────────────────
+//  WHATSAPP
+// ──────────────────────────────────────────────────────────
+function _wa(numero, msg) {
+  if(!CONFIG.CALLMEBOT_API_KEY)return;
+  try { UrlFetchApp.fetch("https://api.callmebot.com/whatsapp.php?phone="+numero+"&text="+encodeURIComponent(msg)+"&apikey="+CONFIG.CALLMEBOT_API_KEY); }
+  catch(e){ Logger.log("WA error: "+e.message); }
 }
