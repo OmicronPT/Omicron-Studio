@@ -24,7 +24,7 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       background: var(--bg); color: var(--text);
-      font-family: var(--mono); font-size: 14px; font-weight: 300;
+      font-family: var(--mono); font-size: 16px; font-weight: 300;
       min-height: 100vh; letter-spacing: 0.02em;
     }
     .wrap { max-width: 620px; margin: 0 auto; padding: 0 20px 80px; }
@@ -50,7 +50,7 @@
     .cn { font-family: var(--serif); font-size: 21px; font-weight: 400; line-height: 1.2; }
     .pills { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 7px; }
     .pill {
-      padding: 3px 10px; border-radius: 20px; font-size: 11px;
+      padding: 3px 10px; border-radius: 20px; font-size: 13px;
       letter-spacing: 0.04em; display: inline-flex; align-items: center; gap: 4px;
     }
     .pill-g { background: rgba(200,169,110,.12); border: 1px solid rgba(200,169,110,.3); color: var(--accent); }
@@ -60,7 +60,7 @@
     /* Sezione */
     .sh { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 16px; }
     .st { font-family: var(--serif); font-size: 19px; font-weight: 300; letter-spacing: 0.06em; }
-    .sc { font-size: 11px; color: var(--muted); letter-spacing: 0.1em; }
+    .sc { font-size: 13px; color: var(--muted); letter-spacing: 0.1em; }
     .divider { height: 1px; background: var(--border); margin: 36px 0; }
 
     /* Prenotazioni attive */
@@ -71,7 +71,7 @@
       display: flex; align-items: center; justify-content: space-between; gap: 12px;
     }
     .pre-data { font-family: var(--serif); font-size: 16px; text-transform: capitalize; }
-    .pre-ora { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .pre-ora { font-size: 14px; color: var(--muted); margin-top: 2px; }
 
     /* Slot */
     .slot-list { display: flex; flex-direction: column; gap: 10px; }
@@ -84,7 +84,7 @@
     .slot:hover { border-color: var(--accent2); background: #16161b; }
     .slot.booked { border-color: rgba(200,169,110,.45); background: rgba(200,169,110,.04); }
     .slot-d { font-family: var(--serif); font-size: 17px; font-weight: 400; text-transform: capitalize; margin-bottom: 4px; }
-    .slot-m { color: var(--muted); font-size: 12px; display: flex; gap: 12px; align-items: center; }
+    .slot-m { color: var(--muted); font-size: 14px; display: flex; gap: 12px; align-items: center; }
     .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--border); }
     .slot-r { display: flex; flex-direction: column; align-items: flex-end; gap: 7px; }
     .posti { display: flex; gap: 4px; }
@@ -95,7 +95,7 @@
     .btn {
       display: inline-flex; align-items: center; justify-content: center;
       padding: 7px 16px; border-radius: 7px; font-family: var(--mono);
-      font-size: 12px; font-weight: 400; letter-spacing: 0.07em;
+      font-size: 14px; font-weight: 400; letter-spacing: 0.07em;
       cursor: pointer; border: none; transition: all .2s; white-space: nowrap;
     }
     .btn-p { background: var(--accent); color: var(--bg); }
@@ -190,7 +190,7 @@
 <script>
 // ─── CONFIGURAZIONE ──────────────────────────────────────────────────────────
 // Sostituisci con il tuo URL Apps Script dopo il deploy
-const BACKEND_URL = "https://script.google.com/macros/s/AKfycbxKTWQ7eaglByXU_aF-V3Jm_DdNOVOjaPoR9vNvUAB7mSvFwh0150_eOrjnFRwZ7AlUQw/exec";
+const BACKEND_URL = "INSERISCI_QUI_URL_APPS_SCRIPT";
 
 // Token dal parametro URL: cliente.html?t=TOKEN
 const TOKEN = new URLSearchParams(window.location.search).get("t") || "";
@@ -308,7 +308,7 @@ function renderPrenotazioni() {
         <div class="pre-data">${p.dataLabel}</div>
         <div class="pre-ora">🕐 ${p.ora}</div>
       </div>
-      <button class="btn btn-d" style="font-size:11px;padding:6px 13px"
+      <button class="btn btn-d" style="font-size:13px;padding:6px 13px"
         onclick="apriModal('${p.id}','${p.dataLabel}','${p.ora}')">Cancella</button>
     </div>`).join("");
 }
@@ -343,7 +343,7 @@ function renderSessioni() {
         <div class="posti">${posti}</div>
         ${booked
           ? `<button class="btn btn-ok" disabled>✓ Prenotata</button>`
-          : `<button class="btn btn-p" style="font-size:11px;padding:6px 14px"
+          : `<button class="btn btn-p" style="font-size:13px;padding:6px 14px"
                onclick="prenota('${s.id}',this)">Prenota</button>`
         }
       </div>
