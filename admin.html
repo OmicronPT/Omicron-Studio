@@ -456,7 +456,7 @@ function renderCal(){
   let cells="";
   for(let i=0;i<startDow;i++){const d=new Date(calAnno,calMeseN,1-startDow+i);cells+=`<div class="cal-day other-month"><div class="cal-day-num">${d.getDate()}</div></div>`;}
   for(let d=1;d<=ultimo.getDate();d++){
-    const date=new Date(calAnno,calMeseN,d),dateStr=date.toISOString().split("T")[0];
+    const date=new Date(calAnno,calMeseN,d),dateStr=const dateStr=date.getFullYear()+"-"+String(date.getMonth()+1).padStart(2,"0")+"-"+String(date.getDate()).padStart(2,"0");
     const isOggi=date.getTime()===oggi.getTime();
     const sessioni=Array.isArray(calData)?calData.filter(s=>s.data===dateStr):[];
     const dots=sessioni.map(s=>{const cls=s.stato==="Cancellata"?"dot-canc":s.postiOccupati>=s.postiTotali?"dot-full":"dot-avail";return`<span class="cal-session-dot ${cls}" onclick="event.stopPropagation();apriDettaglioSessione('${s.id}')">${s.oraInizio}</span>`;}).join("");
