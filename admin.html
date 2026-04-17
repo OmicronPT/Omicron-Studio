@@ -723,7 +723,7 @@ async function apriDettaglioCliente(id){
     <button class="btn btn-secondary btn-sm" onclick="editLezioni('${c.id}',${c.lezioniRim})">Modifica lezioni</button>
     <button class="btn btn-secondary btn-sm" onclick="editScadenza('${c.id}','${c.dataScad}')">Modifica scadenza</button></div>`;
   document.getElementById("tab-anamnesi").innerHTML=c.noteAnamnesi?`<div class="note-box">${c.noteAnamnesi}</div>`:'<div class="empty-state" style="padding:24px">Nessuna nota</div>';
-  document.getElementById("tab-rinnovo").innerHTML="";
+  const tabRinnovo=document.getElementById("tab-rinnovo"); if(tabRinnovo) tabRinnovo.innerHTML="";
   document.querySelectorAll(".det-tab").forEach((t,i)=>t.classList.toggle("active",i===0));
   document.querySelectorAll(".det-tab-content").forEach((t,i)=>t.classList.toggle("active",i===0));
   document.getElementById("btn-del-cliente").style.display="";document.getElementById("btn-edit-cliente").style.display="";
