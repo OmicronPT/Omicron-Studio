@@ -370,11 +370,11 @@
 <div id="toast"></div>
 
 <script>
-const BACKEND_URL = "https://script.google.com/macros/s/AKfycby9sWxfytYmOpP3yIxkrODRpsSSaXwyIrFk6NT0z7iEoJigjmdpCFXZybgCXhrSNPIU2w/exec";
+const BACKEND_URL = "https://script.google.com/macros/s/AKfycbyRrRtTrYrFVkxQPSJVlfZLncCL4Hjx2M3BbKR3UVeWENQg41kTOvSse_XRlR-4fqs4eA/exec";
 const GITHUB_BASE = "https://OmicronPT.github.io/Omicron-Studio/cliente.html?t=";
 
 let PW="", pacchetti=[], calAnno=new Date().getFullYear(), calMeseN=new Date().getMonth();
-let calData=[], clienteCorrente=null, giornoSelezionato="";
+let calData=[], clienteCorrente=null, giornoSelezionato="", _clienteCorrenteObj=null;
 
 // ── AUTH ──────────────────────────────────────────────────
 async function doLogin(){
@@ -699,6 +699,7 @@ async function apriDettaglioCliente(id){
   const ini=(c.nome[0]+c.cognome[0]).toUpperCase();
   const eta=c.dataNascita?Math.floor((new Date()-new Date(c.dataNascita))/3.15576e10)+"anni":"—";
   const gg=Math.ceil((new Date(c.dataScad)-new Date())/864e5);
+  _clienteCorrenteObj=c;
   document.getElementById("det-avatar").textContent=ini;
   document.getElementById("det-name").textContent=c.nome+" "+c.cognome;
   document.getElementById("det-pkg").textContent=c.pacchetto+" · "+c.lezioniRim+" lezioni rimanenti";
@@ -722,6 +723,7 @@ async function apriDettaglioCliente(id){
     <button class="btn btn-secondary btn-sm" onclick="editLezioni('${c.id}',${c.lezioniRim})">Modifica lezioni</button>
     <button class="btn btn-secondary btn-sm" onclick="editScadenza('${c.id}','${c.dataScad}')">Modifica scadenza</button></div>`;
   document.getElementById("tab-anamnesi").innerHTML=c.noteAnamnesi?`<div class="note-box">${c.noteAnamnesi}</div>`:'<div class="empty-state" style="padding:24px">Nessuna nota</div>';
+  document.getElementById("tab-rinnovo").innerHTML="";
   document.querySelectorAll(".det-tab").forEach((t,i)=>t.classList.toggle("active",i===0));
   document.querySelectorAll(".det-tab-content").forEach((t,i)=>t.classList.toggle("active",i===0));
   document.getElementById("btn-del-cliente").style.display="";document.getElementById("btn-edit-cliente").style.display="";
@@ -735,6 +737,7 @@ function switchTab(nome,el){
   document.querySelectorAll(".det-tab-content").forEach(t=>t.classList.remove("active"));
   if(el)el.classList.add("active");
   document.getElementById("tab-"+nome).classList.add("active");
+  if(nome==="rinnovo"&&_clienteCorrenteObj) loadTabRinnovo(_clienteCorrenteObj);
 }
 
 function apriModificaCliente(c){
@@ -758,6 +761,56 @@ function editLezioni(id,current){
 function editScadenza(id,current){
   const d=prompt("Nuova data scadenza (yyyy-mm-dd):",current);if(!d)return;
   post({action:"adminEditCliente",id,dataScad:d}).then(res=>{if(res.error){toast(res.error,"err");return;}toast("Scadenza aggiornata","ok");chiudiModal("ov-dettaglio");loadClienti();});
+}
+
+async function loadTabRinnovo(c){
+  const tab=document.getElementById("tab-rinnovo");
+  tab.innerHTML='<div class="spin"></div>';
+  const canc=await jsonp(BACKEND_URL+"?action=adminStoricoCanc&pw="+encodeURIComponent(PW)+"&idCliente="+c.id);
+  const gg=Math.ceil((new Date(c.dataScad)-new Date())/864e5);
+  const pkgOpts=pacchetti.map(p=>`<option value="${p.id}" ${p.nome===c.pacchetto?"selected":""}>${p.nome} — €${p.prezzo} (${p.lezioni} lezioni)</option>`).join("");
+  tab.innerHTML=`
+    <div style="margin-bottom:20px">
+      <div style="font-family:var(--serif);font-size:16px;margin-bottom:10px">Stato abbonamento</div>
+      <div class="detail-grid">
+        <div class="detail-item"><div class="detail-label">Abbonamento</div><div class="detail-value">${c.pacchetto}</div></div>
+        <div class="detail-item"><div class="detail-label">Scadenza</div><div class="detail-value" style="${gg<=7?'color:var(--warn)':''}">${c.dataScad} (${gg}gg)</div></div>
+        <div class="detail-item"><div class="detail-label">Lezioni rimanenti</div><div class="detail-value" style="${c.lezioniRim<=2?'color:var(--warn)':''}">${c.lezioniRim}</div></div>
+      </div>
+    </div>
+    <div style="margin-bottom:20px">
+      <div style="font-family:var(--serif);font-size:16px;margin-bottom:10px">Cancellazioni ultimo mese</div>
+      ${!Array.isArray(canc)||!canc.length
+        ?'<div style="color:var(--muted);font-size:13px">Nessuna cancellazione</div>'
+        :`<table><tr><th>Data</th><th>Ora</th></tr>
+          ${canc.map(p=>`<tr><td style="text-transform:capitalize">${p.dataLabel}</td><td>${p.oraInizio}</td></tr>`).join("")}
+        </table>`
+      }
+    </div>
+    <div style="background:var(--surf2);border:1px solid var(--border);border-radius:10px;padding:16px">
+      <div style="font-family:var(--serif);font-size:16px;margin-bottom:14px">Rinnova abbonamento</div>
+      <div class="form-grid" style="margin-bottom:14px">
+        <div class="form-group">
+          <label class="form-label">Abbonamento</label>
+          <select class="form-select" id="rinnovo-pkg">${pkgOpts}</select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Lezioni recuperabili da aggiungere</label>
+          <input class="form-input" type="number" id="rinnovo-recuperabili" value="0" min="0" max="12"/>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="eseguiRinnovo('${c.id}')">✓ Rinnova abbonamento</button>
+    </div>`;
+}
+
+async function eseguiRinnovo(idCliente){
+  const idPacchetto=document.getElementById("rinnovo-pkg").value;
+  const lezioniRecuperabili=parseInt(document.getElementById("rinnovo-recuperabili").value)||0;
+  const res=await post({action:"adminRinnovaAbbonamento",id:idCliente,idPacchetto,lezioniRecuperabili});
+  if(res.error){toast(res.error,"err");return;}
+  toast(`Abbonamento rinnovato! ${res.nuoveLezioni} lezioni disponibili.`,"ok");
+  chiudiModal("ov-dettaglio");
+  loadClienti();
 }
 async function eliminaCliente(id){
   if(!confirm("Elimina questo cliente?"))return;
