@@ -368,11 +368,30 @@ function renderCal(){
     cells+=`<div class="${cls}" ${click}>${d}${dot}</div>`;
   }
 
-  // Celle dopo
-  const rimaste=(7-(startDow+ultimo.getDate())%7)%7;
-  for(let i=1;i<=rimaste;i++){
-    cells+=`<div class="cal-cell other-month">${i}</div>`;
+// Celle dopo — completano l'ultima settimana con giorni del mese successivo
+const rimaste=(7-(startDow+ultimo.getDate())%7)%7;
+for(let i=1;i<=rimaste;i++){
+  const date=new Date(calAnno,calMeseN+1,i);
+  const dateStr=date.getFullYear()+"-"+String(date.getMonth()+1).padStart(2,"0")+"-"+String(date.getDate()).padStart(2,"0");
+  const dow=date.getDay();
+  const isWeekend=dow===0||dow===6;
+  const info=slotMap[dateStr];
+  const oggi2=new Date(); oggi2.setHours(0,0,0,0);
+  const isPast=date<oggi2;
+  let cls="cal-cell";
+  let dot="";
+  if(isWeekend) cls+=" weekend";
+  else if(isPast) cls+=" passato";
+  else if(!info) cls+=" bloccato";
+  else{
+    const liberi=info.slots.filter(s=>!s.prenotato&&s.postiLiberi>0);
+    if(liberi.length===0) cls+=" pieno";
+    else cls+=" disponibile";
+    dot=`<div class="cal-dot"></div>`;
   }
+  const click=(!isWeekend&&!isPast&&info)?`onclick="selezionaGiorno('${dateStr}')"` : "";
+  cells+=`<div class="${cls}" ${click}>${i}${dot}</div>`;
+}
 
   document.getElementById("cal-grid").innerHTML=cells;
 }
