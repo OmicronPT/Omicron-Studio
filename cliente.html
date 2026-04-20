@@ -7,196 +7,244 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
   <style>
-    :root{--bg:#f5f3f0;--surface:#ffffff;--border:#e0ddd8;--accent:#E8500A;--accent2:#c4420a;--text:#1a1a1a;--muted:#6b6b6b;--r:12px;--serif:'Cormorant Garamond',Georgia,serif;--mono:'DM Mono',monospace}
+    :root{
+      --bg:#f5f3f0;--surface:#ffffff;--border:#e0ddd8;
+      --accent:#E8500A;--accent2:#c4420a;--text:#1a1a1a;--muted:#6b6b6b;
+      --r:12px;--serif:'Cormorant Garamond',Georgia,serif;--mono:'DM Mono',monospace
+    }
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:16px;font-weight:300;min-height:100vh;letter-spacing:.02em}
-    .wrap{max-width:640px;margin:0 auto;padding:0 20px 80px}
+    body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:15px;font-weight:300;min-height:100vh}
 
-    header{padding:44px 0 32px;border-bottom:1px solid var(--border);margin-bottom:36px}
-    .logo{font-family:var(--serif);font-size:30px;font-weight:300;letter-spacing:.12em;color:var(--accent)}
+    /* ── HEADER FISSO ── */
+    .top-bar{
+      position:sticky;top:0;z-index:50;
+      background:var(--surface);border-bottom:1px solid var(--border);
+      box-shadow:0 2px 8px rgba(0,0,0,.06);
+    }
+    .top-bar-inner{max-width:680px;margin:0 auto;padding:14px 20px;}
+    .logo-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .logo{font-family:var(--serif);font-size:22px;font-weight:300;letter-spacing:.1em;color:var(--accent)}
     .logo b{font-weight:600}
-    .sub{color:var(--muted);font-size:12px;letter-spacing:.18em;text-transform:uppercase;margin-top:4px}
+    .cliente-pill{display:flex;align-items:center;gap:8px}
+    .av-sm{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent2),var(--accent));display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:13px;color:#fff;flex-shrink:0}
+    .cliente-info{font-size:13px}
+    .cliente-nome{color:var(--text);font-weight:400}
+    .cliente-lezioni{color:var(--muted);font-size:11px;margin-top:1px}
+    .cliente-lezioni.warn{color:var(--accent2)}
 
-    /* Card cliente */
-    .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:22px 24px;margin-bottom:32px;display:flex;align-items:center;gap:18px}
-    .av{width:50px;height:50px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,var(--accent2),var(--accent));display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:20px;color:#fff}
-    .cn{font-family:var(--serif);font-size:22px;font-weight:400;line-height:1.2}
-    .pills{display:flex;gap:7px;flex-wrap:wrap;margin-top:7px}
-    .pill{padding:3px 10px;border-radius:20px;font-size:13px;display:inline-flex;align-items:center;gap:4px}
-    .pill-g{background:rgba(232,80,10,.1);border:1px solid rgba(232,80,10,.3);color:var(--accent2)}
-    .pill-m{background:rgba(107,107,107,.08);border:1px solid var(--border);color:var(--muted)}
-    .pill-w{background:rgba(220,38,38,.08);border:1px solid rgba(220,38,38,.3);color:#dc2626}
+    /* ── REGOLE COMPATTE ── */
+    .regole-bar{
+      display:flex;gap:6px;flex-wrap:wrap;padding-top:10px;
+      border-top:1px solid var(--border);
+    }
+    .regola-pill{
+      display:inline-flex;align-items:center;gap:4px;
+      padding:3px 10px;border-radius:20px;font-size:11px;
+      background:rgba(232,80,10,.07);border:1px solid rgba(232,80,10,.2);
+      color:var(--text);
+    }
 
-    /* Prenotazioni attive */
-    .pre-list{display:flex;flex-direction:column;gap:8px}
-    .pre-item{background:rgba(232,80,10,.04);border:1px solid rgba(232,80,10,.2);border-radius:8px;padding:13px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
-    .pre-data{font-family:var(--serif);font-size:17px;text-transform:capitalize}
-    .pre-ora{font-size:13px;color:var(--muted);margin-top:2px}
+    /* ── CONTENT ── */
+    .wrap{max-width:680px;margin:0 auto;padding:24px 20px 80px}
 
-    /* Sezione */
-    .sh{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px}
-    .st{font-family:var(--serif);font-size:20px;font-weight:300;letter-spacing:.06em}
-    .sc{font-size:12px;color:var(--muted);letter-spacing:.1em}
-    .divider{height:1px;background:var(--border);margin:36px 0}
+    /* ── PRENOTAZIONI ATTIVE ── */
+    .section-title{font-family:var(--serif);font-size:19px;font-weight:300;margin-bottom:12px;color:var(--text)}
+    .pre-list{display:flex;flex-direction:column;gap:8px;margin-bottom:28px}
+    .pre-item{
+      background:var(--surface);border:1px solid rgba(232,80,10,.25);
+      border-radius:10px;padding:12px 16px;
+      display:flex;align-items:center;justify-content:space-between;gap:12px;
+    }
+    .pre-data{font-family:var(--serif);font-size:16px;text-transform:capitalize;color:var(--text)}
+    .pre-ora{font-size:12px;color:var(--muted);margin-top:2px}
+    .divider{height:1px;background:var(--border);margin:24px 0}
 
-    /* Giorni */
-    .giorno-block{margin-bottom:28px}
-    .giorno-title{font-family:var(--serif);font-size:19px;font-weight:300;text-transform:capitalize;color:var(--text);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+    /* ── CALENDARIO ── */
+    .cal-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+    .cal-title{font-family:var(--serif);font-size:22px;font-weight:300;flex:1}
+    .cal-nav{display:flex;gap:6px}
+    .cal-nav-btn{
+      width:34px;height:34px;border-radius:8px;border:1px solid var(--border);
+      background:var(--surface);color:var(--text);cursor:pointer;
+      font-size:14px;display:flex;align-items:center;justify-content:center;
+      transition:all .15s;
+    }
+    .cal-nav-btn:hover{border-color:var(--accent);color:var(--accent)}
 
-    /* Slot grid */
-    .slot-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
-    .slot{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;cursor:pointer;transition:all .2s;text-align:center}
-    .slot:hover{border-color:var(--accent2);background:#16161b}
-    .slot.prenotato{border-color:rgba(232,80,10,.4);background:rgba(232,80,10,.05);cursor:default}
-    .slot-ora{font-family:var(--serif);font-size:22px;font-weight:300;color:var(--text);margin-bottom:4px}
-    .slot-fine{font-size:12px;color:var(--muted);margin-bottom:8px}
-    .slot-posti{font-size:12px;color:var(--muted)}
-    .slot-posti.scarsi{color:var(--accent2)}
-    .slot-badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:11px;margin-top:4px}
-    .slot-badge-ok{background:rgba(232,80,10,.08);border:1px solid rgba(232,80,10,.3);color:var(--accent2)}
-    .slot-badge-pre{background:rgba(39,174,96,.1);border:1px solid rgba(39,174,96,.3);color:#18a34a}
+    .cal-days-header{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px}
+    .cal-day-label{text-align:center;font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;padding:4px 0}
 
-    /* Bottoni */
-    .btn{display:inline-flex;align-items:center;justify-content:center;padding:8px 16px;border-radius:8px;font-family:var(--mono);font-size:13px;font-weight:400;letter-spacing:.07em;cursor:pointer;border:none;transition:all .2s;white-space:nowrap}
-    .btn-p{background:var(--accent);color:var(--bg)}
+    .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:24px}
+    .cal-cell{
+      aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;
+      align-items:center;justify-content:center;cursor:pointer;
+      font-size:14px;position:relative;transition:all .15s;
+      border:1px solid transparent;background:transparent;
+    }
+    .cal-cell.other-month{opacity:.25;pointer-events:none}
+    .cal-cell.weekend{opacity:.35;pointer-events:none;color:var(--muted)}
+    .cal-cell.passato{opacity:.3;pointer-events:none}
+    .cal-cell.disponibile{background:var(--surface);border-color:var(--border);color:var(--text)}
+    .cal-cell.disponibile:hover{border-color:var(--accent);background:#fff8f5}
+    .cal-cell.selezionato{background:var(--accent);border-color:var(--accent);color:#fff}
+    .cal-cell.oggi{font-weight:400;border-color:var(--accent2);}
+    .cal-cell.oggi:not(.selezionato){color:var(--accent2)}
+    .cal-cell.pieno{background:var(--surface);border-color:var(--border);opacity:.5;pointer-events:none}
+    .cal-cell.bloccato{opacity:.25;pointer-events:none}
+    .cal-dot{
+      width:5px;height:5px;border-radius:50%;
+      background:var(--accent);position:absolute;bottom:4px;
+    }
+    .cal-cell.selezionato .cal-dot{background:#fff}
+    .cal-cell.pieno .cal-dot{background:var(--muted)}
+
+    /* ── SLOT DEL GIORNO ── */
+    .slot-panel{
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--r);padding:20px;
+      animation:fadeIn .2s ease;
+    }
+    @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+    .slot-panel-title{font-family:var(--serif);font-size:18px;text-transform:capitalize;margin-bottom:16px;color:var(--text)}
+    .slot-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px}
+    .slot{
+      background:var(--bg);border:1px solid var(--border);border-radius:10px;
+      padding:12px 10px;cursor:pointer;transition:all .18s;text-align:center;
+    }
+    .slot:hover{border-color:var(--accent);background:#fff8f5}
+    .slot.prenotato{border-color:rgba(232,80,10,.4);background:rgba(232,80,10,.06);cursor:default}
+    .slot-ora{font-family:var(--serif);font-size:20px;font-weight:300;color:var(--text);margin-bottom:2px}
+    .slot-fine{font-size:11px;color:var(--muted);margin-bottom:6px}
+    .slot-posti{font-size:11px;color:var(--muted)}
+    .slot-posti.scarsi{color:var(--accent2);font-weight:400}
+    .slot-badge{font-size:11px;color:#18a34a;margin-top:2px}
+    .slot-vuoto{text-align:center;padding:24px;color:var(--muted);font-size:13px}
+
+    /* ── BOTTONI ── */
+    .btn{display:inline-flex;align-items:center;justify-content:center;padding:8px 16px;border-radius:8px;font-family:var(--mono);font-size:13px;cursor:pointer;border:none;transition:all .18s;white-space:nowrap}
+    .btn-p{background:var(--accent);color:#fff}
     .btn-p:hover{background:var(--accent2)}
-    .btn-p:disabled{background:var(--border);color:var(--muted);cursor:not-allowed}
-    .btn-d{background:transparent;border:1px solid rgba(192,57,43,.4);color:#e74c3c}
-    .btn-d:hover{background:rgba(192,57,43,.1)}
-    .btn-sm{padding:6px 13px;font-size:12px}
+    .btn-d{background:transparent;border:1px solid rgba(220,38,38,.4);color:#dc2626}
+    .btn-d:hover{background:rgba(220,38,38,.08)}
+    .btn-sm{padding:5px 12px;font-size:12px}
 
-    /* Toast */
-    #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--text);border:1px solid var(--text);border-radius:10px;padding:13px 22px;font-size:14px;color:var(--surface);opacity:0;transition:all .3s;pointer-events:none;z-index:999;max-width:320px;text-align:center}
+    /* ── TOAST ── */
+    #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(14px);background:var(--text);border-radius:10px;padding:12px 22px;font-size:14px;color:var(--surface);opacity:0;transition:all .3s;pointer-events:none;z-index:999;max-width:320px;text-align:center}
     #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-    #toast.ok{background:#18a34a;border-color:#18a34a;color:#fff}
-    #toast.err{background:#dc2626;border-color:#dc2626;color:#fff}
+    #toast.ok{background:#18a34a}
+    #toast.err{background:#dc2626}
 
-    /* Modal */
-    .ov{position:fixed;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;z-index:100;opacity:0;pointer-events:none;transition:opacity .2s}
+    /* ── MODAL ── */
+    .ov{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:100;opacity:0;pointer-events:none;transition:opacity .2s}
     .ov.open{opacity:1;pointer-events:all}
-    .modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px;max-width:340px;width:90%;transform:translateY(16px);transition:transform .2s}
+    .modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px;max-width:340px;width:90%;transform:translateY(16px);transition:transform .2s;box-shadow:0 20px 60px rgba(0,0,0,.12)}
     .ov.open .modal{transform:none}
     .modal h3{font-family:var(--serif);font-size:22px;margin-bottom:8px}
     .modal p{color:var(--muted);font-size:14px;margin-bottom:22px;line-height:1.6}
     .ma{display:flex;gap:9px;justify-content:flex-end}
 
-    .spin{width:32px;height:32px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:sp .8s linear infinite;margin:50px auto}
+    /* ── SPIN ── */
+    .spin{width:28px;height:28px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:sp .8s linear infinite;margin:30px auto}
     @keyframes sp{to{transform:rotate(360deg)}}
-    .empty{text-align:center;padding:36px;color:var(--muted)}
+    .empty{text-align:center;padding:32px;color:var(--muted)}
 
-    /* Regole */
-    .regole{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:24px;margin-top:48px}
-    .regole-title{font-family:var(--serif);font-size:20px;font-weight:300;color:var(--text);margin-bottom:16px;display:flex;align-items:center;gap:10px}
-    .regole-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .regola-item{padding:12px 14px;background:var(--bg);border-radius:8px;border:1px solid var(--border)}
-    .regola-icon{font-size:18px;margin-bottom:6px}
-    .regola-label{font-size:12px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
-    .regola-text{font-size:14px;color:var(--text);line-height:1.5}
-    .regole-note{margin-top:14px;padding:12px 14px;background:rgba(232,80,10,.05);border:1px solid rgba(232,80,10,.2);border-radius:8px;font-size:13px;color:var(--muted);line-height:1.6}
-    @media(max-width:480px){.regole-grid{grid-template-columns:1fr}}
     @media(max-width:480px){
-      .card{flex-direction:column;align-items:flex-start}
+      .regole-bar{gap:4px}
       .slot-grid{grid-template-columns:repeat(3,1fr)}
     }
   </style>
 </head>
 <body>
+
+<!-- ── HEADER FISSO ── -->
+<div class="top-bar">
+  <div class="top-bar-inner">
+    <div class="logo-row">
+      <div class="logo"><b>OMICRON</b> STUDIO</div>
+      <div class="cliente-pill" id="cliente-pill">
+        <div class="av-sm" id="av-sm">…</div>
+        <div class="cliente-info">
+          <div class="cliente-nome" id="cliente-nome">Caricamento…</div>
+          <div class="cliente-lezioni" id="cliente-lezioni"></div>
+        </div>
+      </div>
+    </div>
+    <div class="regole-bar">
+      <span class="regola-pill">📅 Lun–Ven · 8:30–19:00</span>
+      <span class="regola-pill">👥 Max 3 per slot</span>
+      <span class="regola-pill">⏱️ Cancella entro 24h</span>
+      <span class="regola-pill">🔄 Assenza &gt;24h = recuperabile</span>
+      <span class="regola-pill">❌ &lt;24h = lezione persa</span>
+    </div>
+  </div>
+</div>
+
+<!-- ── CONTENT ── -->
 <div class="wrap">
-  <header>
-    <div class="logo"><b>OMICRON</b> STUDIO</div>
-    <div class="sub">Personal Training · Napoli</div>
-  </header>
 
-  <div id="card-cliente"></div>
-
+  <!-- Prenotazioni attive -->
   <div id="sec-pre" style="display:none">
-    <div class="sh"><div class="st">Le mie prenotazioni</div></div>
+    <div class="section-title">Le mie prenotazioni</div>
     <div id="lista-pre" class="pre-list"></div>
     <div class="divider"></div>
   </div>
 
-  <div class="sh">
-    <div class="st">Prenota una sessione</div>
-    <div class="sc" id="cnt"></div>
-  </div>
-  <div id="lista-slot"><div class="spin"></div></div>
-  <!-- Regole prenotazione -->
-  <div class="regole">
-    <div class="regole-title">📋 Regole di prenotazione</div>
-    <div class="regole-grid">
-      <div class="regola-item">
-        <div class="regola-icon">📅</div>
-        <div class="regola-label">Disponibilità</div>
-        <div class="regola-text">Lunedì – Venerdì<br>dalle 8:30 alle 19:00<br>slot ogni 30 minuti</div>
-      </div>
-      <div class="regola-item">
-        <div class="regola-icon">👥</div>
-        <div class="regola-label">Posti per slot</div>
-        <div class="regola-text">Massimo 3 persone per sessione. Prenota in anticipo per assicurarti il posto!</div>
-      </div>
-      <div class="regola-item">
-        <div class="regola-icon">⏱️</div>
-        <div class="regola-label">Cancellazione</div>
-        <div class="regola-text">Puoi cancellare fino a <strong>24 ore prima</strong> della sessione. La lezione viene riaccreditata automaticamente.</div>
-      </div>
-      <div class="regola-item">
-        <div class="regola-icon">❌</div>
-        <div class="regola-label">Cancellazione tardiva</div>
-        <div class="regola-text">Le cancellazioni effettuate meno di 24 ore prima comportano la perdita della lezione.</div>
-      </div>
-      <div class="regola-item">
-        <div class="regola-icon">🔄</div>
-        <div class="regola-label">Lezioni recuperabili</div>
-        <div class="regola-text">Le assenze comunicate almeno 24 ore prima possono essere recuperate nel mese successivo. A discrezione dello studio.</div>
-      </div>
-      <div class="regola-item">
-        <div class="regola-icon">⚠️</div>
-        <div class="regola-label">Scadenza pacchetto</div>
-        <div class="regola-text">Le lezioni non utilizzate entro la data di scadenza del pacchetto vengono perse.</div>
-      </div>
+  <!-- Calendario -->
+  <div class="cal-header">
+    <div class="cal-title" id="cal-title"></div>
+    <div class="cal-nav">
+      <button class="cal-nav-btn" onclick="calMese(-1)">←</button>
+      <button class="cal-nav-btn" onclick="calMese(1)">→</button>
     </div>
-    <div class="regole-note">
-      Per qualsiasi necessità, modifica straordinaria o informazione contatta direttamente lo studio. Siamo qui per trovare la soluzione migliore per te! 💪
+  </div>
+  <div class="cal-days-header" id="cal-days-header"></div>
+  <div class="cal-grid" id="cal-grid"><div class="spin"></div></div>
+
+  <!-- Slot del giorno selezionato -->
+  <div id="slot-panel" style="display:none"></div>
+
+</div>
+
+<!-- MODAL CONFERMA PRENOTAZIONE -->
+<div class="ov" id="ov">
+  <div class="modal">
+    <h3>Conferma prenotazione</h3>
+    <p id="modal-txt"></p>
+    <div class="ma">
+      <button class="btn btn-sm" style="border:1px solid var(--border)" onclick="chiudiModal('ov')">Annulla</button>
+      <button class="btn btn-p btn-sm" id="btn-ok-prenota">Conferma</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CANCELLA -->
+<div class="ov" id="ov-canc">
+  <div class="modal">
+    <h3>Cancella prenotazione</h3>
+    <p id="modal-canc-txt">Sei sicuro? La lezione verrà riaccreditata al tuo pacchetto.</p>
+    <div class="ma">
+      <button class="btn btn-sm" style="border:1px solid var(--border)" onclick="chiudiModal('ov-canc')">Annulla</button>
+      <button class="btn btn-d btn-sm" id="btn-ok-canc">Cancella</button>
     </div>
   </div>
 </div>
 
 <div id="toast"></div>
 
-<div class="ov" id="ov">
-  <div class="modal">
-    <h3>Conferma prenotazione</h3>
-    <p id="modal-txt"></p>
-    <div class="ma">
-      <button class="btn btn-sm" style="border:1px solid var(--border)" onclick="chiudiModal()">Annulla</button>
-      <button class="btn btn-p btn-sm" id="btn-ok">Conferma</button>
-    </div>
-  </div>
-</div>
-
-<div class="ov" id="ov-cancella">
-  <div class="modal">
-    <h3>Cancella prenotazione</h3>
-    <p id="modal-canc-txt">Sei sicuro? La lezione verrà riaccreditata.</p>
-    <div class="ma">
-      <button class="btn btn-sm" style="border:1px solid var(--border)" onclick="chiudiModalCancella()">Annulla</button>
-      <button class="btn btn-d btn-sm" id="btn-ok-cancella">Cancella</button>
-    </div>
-  </div>
-</div>
-
 <script>
 const BACKEND_URL = "https://script.google.com/macros/s/AKfycbxdq0dd4MzZ7CIe6NMvGnQMs3c38a6v64qfh3d6MrmYAv2jJ9SrTvrtKWQu9ztgR-lUXQ/exec";
 const TOKEN = new URLSearchParams(window.location.search).get("t") || "";
 
 let cliente=null, slotsData=[], prenotazioni=[];
+let calAnno=new Date().getFullYear(), calMeseN=new Date().getMonth();
+let giornoSelezionato=null;
 
 // ── JSONP ──────────────────────────────────────────────────
 function jsonp(url){
   return new Promise((resolve,reject)=>{
     const cb="_cb_"+Date.now()+"_"+Math.floor(Math.random()*9999);
     const script=document.createElement("script");
-    const timer=setTimeout(()=>{cleanup();reject(new Error("Timeout — controlla il backend"));},10000);
+    const timer=setTimeout(()=>{cleanup();reject(new Error("Timeout"));},10000);
     window[cb]=(data)=>{cleanup();resolve(data);};
     function cleanup(){clearTimeout(timer);delete window[cb];if(script.parentNode)script.parentNode.removeChild(script);}
     script.onerror=()=>{cleanup();reject(new Error("Errore di rete"));};
@@ -210,42 +258,39 @@ async function post(body){
   catch(e){return{error:e.message};}
 }
 
-// ── INIT ──────────────────────────────────────────────────
+// ── INIT ───────────────────────────────────────────────────
 async function init(){
   if(!TOKEN){showError("🔒","Link non valido. Contatta lo studio.");return;}
   if(BACKEND_URL==="INSERISCI_QUI_URL_APPS_SCRIPT"){showError("⚙️","Backend non configurato.");return;}
   try{
     const [c,s,p]=await Promise.all([get("getCliente"),get("getSlotDisponibili"),get("getPrenotazioni")]);
     if(c.error)throw new Error(c.error);
-    cliente=c;slotsData=Array.isArray(s)?s:[];prenotazioni=Array.isArray(p)?p:[];
-    renderCliente();renderPrenotazioni();renderSlot();
+    cliente=c; slotsData=Array.isArray(s)?s:[]; prenotazioni=Array.isArray(p)?p:[];
+    renderClientePill();
+    renderPrenotazioni();
+    renderCal();
   }catch(e){showError("⚠️",e.message);}
 }
 
 function showError(ic,msg){
-  document.getElementById("card-cliente").innerHTML=`<div class="empty">${ic}<br>${msg}</div>`;
-  document.getElementById("lista-slot").innerHTML="";
+  document.getElementById("cal-grid").innerHTML=`<div class="empty" style="grid-column:1/-1">${ic}<br>${msg}</div>`;
 }
 
-// ── RENDER CLIENTE ─────────────────────────────────────────
-function renderCliente(){
+// ── HEADER CLIENTE ─────────────────────────────────────────
+function renderClientePill(){
   const ini=(cliente.nome[0]+cliente.cognome[0]).toUpperCase();
-  const scad=new Date(cliente.dataScad),gg=Math.ceil((scad-new Date())/864e5);
-  const warn=cliente.lezioniRim<=2,warnS=gg<=7;
-  document.getElementById("card-cliente").innerHTML=`<div class="card">
-    <div class="av">${ini}</div>
-    <div>
-      <div class="cn">${cliente.nome} ${cliente.cognome}</div>
-      <div class="pills">
-        <span class="pill ${warn?'pill-w':'pill-g'}">💪 ${cliente.lezioniRim} lezioni rimanenti</span>
-        <span class="pill ${warnS?'pill-w':'pill-m'}">📅 scade ${fmtData(cliente.dataScad)}</span>
-      </div>
-    </div></div>`;
+  const warn=cliente.lezioniRim<=2;
+  const scad=new Date(cliente.dataScad), gg=Math.ceil((scad-new Date())/864e5);
+  document.getElementById("av-sm").textContent=ini;
+  document.getElementById("cliente-nome").textContent=cliente.nome+" "+cliente.cognome;
+  const lezEl=document.getElementById("cliente-lezioni");
+  lezEl.textContent=`${cliente.lezioniRim} lezioni · scade ${fmtData(cliente.dataScad)}`;
+  lezEl.className="cliente-lezioni"+(warn||gg<=7?" warn":"");
 }
 
-// ── RENDER PRENOTAZIONI ────────────────────────────────────
+// ── PRENOTAZIONI ───────────────────────────────────────────
 function renderPrenotazioni(){
-  const sec=document.getElementById("sec-pre"),lista=document.getElementById("lista-pre");
+  const sec=document.getElementById("sec-pre"), lista=document.getElementById("lista-pre");
   if(!prenotazioni.length){sec.style.display="none";return;}
   sec.style.display="block";
   lista.innerHTML=prenotazioni.map(p=>`<div class="pre-item">
@@ -253,84 +298,166 @@ function renderPrenotazioni(){
       <div class="pre-data">${p.dataLabel}</div>
       <div class="pre-ora">🕐 ${p.oraInizio} – ${p.oraFine}</div>
     </div>
-    <button class="btn btn-d btn-sm" onclick="apriModalCancella('${p.id}','${p.dataLabel}','${p.oraInizio}')">Cancella</button>
+    <button class="btn btn-d btn-sm" onclick="apriModalCanc('${p.id}','${p.dataLabel}','${p.oraInizio}')">Cancella</button>
   </div>`).join("");
 }
 
-// ── RENDER SLOT ────────────────────────────────────────────
-function renderSlot(){
-  const lista=document.getElementById("lista-slot");
-  if(!slotsData.length){lista.innerHTML='<div class="empty">Nessuno slot disponibile al momento.</div>';return;}
+// ── CALENDARIO ─────────────────────────────────────────────
+function calMese(delta){
+  calMeseN+=delta;
+  if(calMeseN>11){calMeseN=0;calAnno++;}
+  if(calMeseN<0){calMeseN=11;calAnno--;}
+  giornoSelezionato=null;
+  document.getElementById("slot-panel").style.display="none";
+  renderCal();
+}
 
-  const totSlot=slotsData.reduce((a,g)=>a+g.slots.length,0);
-  document.getElementById("cnt").textContent=totSlot+" slot disponibili";
+function renderCal(){
+  const mesi=["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
+  document.getElementById("cal-title").textContent=mesi[calMeseN]+" "+calAnno;
 
-  lista.innerHTML=slotsData.map(g=>`
-    <div class="giorno-block">
-      <div class="giorno-title">${g.dataLabel}</div>
-      <div class="slot-grid">
-        ${g.slots.map(s=>{
-          const scarsi=s.postiLiberi<=1;
-          return`<div class="slot ${s.prenotato?'prenotato':''}" onclick="${s.prenotato?'':` apriModalPrenota('${g.data}','${s.ora}','${s.oraFine}','${g.dataLabel}')`}">
-            <div class="slot-ora">${s.ora}</div>
-            <div class="slot-fine">fino alle ${s.oraFine}</div>
-            ${s.prenotato
-              ?'<div class="slot-badge slot-badge-pre">✓ Prenotata</div>'
-              :`<div class="slot-posti ${scarsi?'scarsi':''}">${s.postiLiberi} ${s.postiLiberi===1?'posto':'posti'} liberi</div>`
-            }
-          </div>`;
-        }).join("")}
-      </div>
-    </div>`).join("");
+  // Headers giorni
+  document.getElementById("cal-days-header").innerHTML=
+    ["Lun","Mar","Mer","Gio","Ven","Sab","Dom"].map(g=>`<div class="cal-day-label">${g}</div>`).join("");
+
+  const primo=new Date(calAnno,calMeseN,1);
+  const ultimo=new Date(calAnno,calMeseN+1,0);
+  const startDow=(primo.getDay()+6)%7;
+  const oggi=new Date(); oggi.setHours(0,0,0,0);
+
+  // Mappa slot per data
+  const slotMap={};
+  slotsData.forEach(g=>slotMap[g.data]=g);
+
+  let cells="";
+
+  // Celle prima del mese
+  for(let i=0;i<startDow;i++){
+    const d=new Date(calAnno,calMeseN,1-startDow+i);
+    cells+=`<div class="cal-cell other-month">${d.getDate()}</div>`;
+  }
+
+  // Giorni del mese
+  for(let d=1;d<=ultimo.getDate();d++){
+    const date=new Date(calAnno,calMeseN,d);
+    const dateStr=date.getFullYear()+"-"+String(date.getMonth()+1).padStart(2,"0")+"-"+String(date.getDate()).padStart(2,"0");
+    const dow=date.getDay();
+    const isWeekend=dow===0||dow===6;
+    const isOggi=date.getTime()===oggi.getTime();
+    const isPast=date<oggi;
+    const info=slotMap[dateStr];
+    const isSel=giornoSelezionato===dateStr;
+
+    let cls="cal-cell";
+    let dot="";
+
+    if(isWeekend) cls+=" weekend";
+    else if(isPast) cls+=" passato";
+    else if(!info) cls+=" bloccato";
+    else {
+      const liberi=info.slots.filter(s=>!s.prenotato&&s.postiLiberi>0);
+      if(liberi.length===0) cls+=" pieno";
+      else cls+=" disponibile";
+      dot=`<div class="cal-dot"></div>`;
+    }
+
+    if(isOggi) cls+=" oggi";
+    if(isSel) cls+=" selezionato";
+
+    const click=(!isWeekend&&!isPast&&info)? `onclick="selezionaGiorno('${dateStr}')"` : "";
+    cells+=`<div class="${cls}" ${click}>${d}${dot}</div>`;
+  }
+
+  // Celle dopo
+  const rimaste=(7-(startDow+ultimo.getDate())%7)%7;
+  for(let i=1;i<=rimaste;i++){
+    cells+=`<div class="cal-cell other-month">${i}</div>`;
+  }
+
+  document.getElementById("cal-grid").innerHTML=cells;
+}
+
+// ── SLOT DEL GIORNO ────────────────────────────────────────
+function selezionaGiorno(dateStr){
+  giornoSelezionato=dateStr;
+  renderCal();
+
+  const info=slotsData.find(g=>g.data===dateStr);
+  const panel=document.getElementById("slot-panel");
+  panel.style.display="block";
+
+  if(!info||!info.slots.length){
+    panel.innerHTML=`<div class="slot-panel"><div class="slot-panel-title">${dateStr}</div><div class="slot-vuoto">Nessuno slot disponibile per questo giorno.</div></div>`;
+    panel.scrollIntoView({behavior:"smooth",block:"nearest"});
+    return;
+  }
+
+  const preSet=new Set(prenotazioni.map(p=>p.data+"_"+p.oraInizio));
+
+  panel.innerHTML=`<div class="slot-panel">
+    <div class="slot-panel-title">${info.dataLabel}</div>
+    <div class="slot-grid">
+      ${info.slots.map(s=>{
+        const prenotato=s.prenotato||preSet.has(dateStr+"_"+s.ora);
+        const scarsi=s.postiLiberi===1;
+        return`<div class="slot ${prenotato?'prenotato':''}" ${prenotato?'':` onclick="apriModalPrenota('${dateStr}','${s.ora}','${s.oraFine}','${info.dataLabel}')"`}>
+          <div class="slot-ora">${s.ora}</div>
+          <div class="slot-fine">fino alle ${s.oraFine}</div>
+          ${prenotato
+            ?'<div class="slot-badge">✓ Prenotata</div>'
+            :`<div class="slot-posti ${scarsi?'scarsi':''}">${s.postiLiberi} ${s.postiLiberi===1?'posto':'posti'}</div>`
+          }
+        </div>`;
+      }).join("")}
+    </div>
+  </div>`;
+
+  panel.scrollIntoView({behavior:"smooth",block:"nearest"});
 }
 
 // ── AZIONI ─────────────────────────────────────────────────
-let _pendData="",_pendOra="";
-
 function apriModalPrenota(data,ora,oraFine,dataLabel){
-  _pendData=data;_pendOra=ora;
-  document.getElementById("modal-txt").textContent=`${dataLabel} dalle ${ora} alle ${oraFine}`;
-  document.getElementById("btn-ok").onclick=()=>prenota(data,ora);
-  document.getElementById("ov").classList.add("open");
+  document.getElementById("modal-txt").textContent=`${dataLabel} — dalle ${ora} alle ${oraFine}`;
+  document.getElementById("btn-ok-prenota").onclick=()=>prenota(data,ora);
+  apriModal("ov");
 }
-function chiudiModal(){document.getElementById("ov").classList.remove("open");}
 
 async function prenota(data,ora){
-  chiudiModal();
+  chiudiModal("ov");
   const res=await post({action:"prenota",data,oraInizio:ora});
   if(res.error){toast(res.error,"err");return;}
   toast("Prenotazione confermata! 🎉","ok");
   cliente.lezioniRim=res.lezioniRimanenti;
   const[s,p]=await Promise.all([get("getSlotDisponibili"),get("getPrenotazioni")]);
-  slotsData=Array.isArray(s)?s:[];prenotazioni=Array.isArray(p)?p:[];
-  renderCliente();renderPrenotazioni();renderSlot();
+  slotsData=Array.isArray(s)?s:[]; prenotazioni=Array.isArray(p)?p:[];
+  renderClientePill(); renderPrenotazioni(); renderCal();
+  if(giornoSelezionato) selezionaGiorno(giornoSelezionato);
 }
 
-let _idCanc="";
-function apriModalCancella(id,dataLabel,ora){
-  _idCanc=id;
-  document.getElementById("modal-canc-txt").textContent=`Cancelli la prenotazione del ${dataLabel} alle ${ora}? La lezione verrà riaccreditata.`;
-  document.getElementById("btn-ok-cancella").onclick=()=>cancella(id);
-  document.getElementById("ov-cancella").classList.add("open");
+function apriModalCanc(id,dataLabel,ora){
+  document.getElementById("modal-canc-txt").textContent=`Cancelli il ${dataLabel} alle ${ora}? La lezione verrà riaccreditata.`;
+  document.getElementById("btn-ok-canc").onclick=()=>cancella(id);
+  apriModal("ov-canc");
 }
-function chiudiModalCancella(){document.getElementById("ov-cancella").classList.remove("open");}
 
 async function cancella(id){
-  chiudiModalCancella();
+  chiudiModal("ov-canc");
   const res=await post({action:"cancella",idPrenotazione:id});
   if(res.error){toast(res.error,"err");return;}
   toast("Prenotazione cancellata. Lezione riaccreditata.","ok");
   cliente.lezioniRim=res.lezioniRimanenti;
   const[s,p]=await Promise.all([get("getSlotDisponibili"),get("getPrenotazioni")]);
-  slotsData=Array.isArray(s)?s:[];prenotazioni=Array.isArray(p)?p:[];
-  renderCliente();renderPrenotazioni();renderSlot();
+  slotsData=Array.isArray(s)?s:[]; prenotazioni=Array.isArray(p)?p:[];
+  renderClientePill(); renderPrenotazioni(); renderCal();
+  if(giornoSelezionato) selezionaGiorno(giornoSelezionato);
 }
 
 // ── UTILS ──────────────────────────────────────────────────
-function fmtData(str){return new Date(str).toLocaleDateString("it-IT",{day:"numeric",month:"short",year:"numeric"});}
+function fmtData(str){return new Date(str).toLocaleDateString("it-IT",{day:"numeric",month:"short"});}
+function apriModal(id){document.getElementById(id).classList.add("open");}
+function chiudiModal(id){document.getElementById(id).classList.remove("open");}
 function toast(msg,tipo){const el=document.getElementById("toast");el.textContent=msg;el.className="show "+(tipo||"");setTimeout(()=>el.className="",3500);}
-document.getElementById("ov").addEventListener("click",e=>{if(e.target===document.getElementById("ov"))chiudiModal();});
-document.getElementById("ov-cancella").addEventListener("click",e=>{if(e.target===document.getElementById("ov-cancella"))chiudiModalCancella();});
+document.querySelectorAll(".ov").forEach(ov=>ov.addEventListener("click",e=>{if(e.target===ov)ov.classList.remove("open");}));
 
 init();
 </script>
