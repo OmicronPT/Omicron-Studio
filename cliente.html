@@ -84,6 +84,16 @@
     @keyframes sp{to{transform:rotate(360deg)}}
     .empty{text-align:center;padding:36px;color:var(--muted)}
 
+    /* Regole */
+    .regole{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:24px;margin-top:48px}
+    .regole-title{font-family:var(--serif);font-size:20px;font-weight:300;color:var(--text);margin-bottom:16px;display:flex;align-items:center;gap:10px}
+    .regole-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .regola-item{padding:12px 14px;background:var(--bg);border-radius:8px;border:1px solid var(--border)}
+    .regola-icon{font-size:18px;margin-bottom:6px}
+    .regola-label{font-size:12px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
+    .regola-text{font-size:14px;color:var(--text);line-height:1.5}
+    .regole-note{margin-top:14px;padding:12px 14px;background:rgba(232,80,10,.05);border:1px solid rgba(232,80,10,.2);border-radius:8px;font-size:13px;color:var(--muted);line-height:1.6}
+    @media(max-width:480px){.regole-grid{grid-template-columns:1fr}}
     @media(max-width:480px){
       .card{flex-direction:column;align-items:flex-start}
       .slot-grid{grid-template-columns:repeat(3,1fr)}
@@ -110,6 +120,45 @@
     <div class="sc" id="cnt"></div>
   </div>
   <div id="lista-slot"><div class="spin"></div></div>
+  <!-- Regole prenotazione -->
+  <div class="regole">
+    <div class="regole-title">📋 Regole di prenotazione</div>
+    <div class="regole-grid">
+      <div class="regola-item">
+        <div class="regola-icon">📅</div>
+        <div class="regola-label">Disponibilità</div>
+        <div class="regola-text">Lunedì – Venerdì<br>dalle 9:00 alle 19:00<br>slot ogni 30 minuti</div>
+      </div>
+      <div class="regola-item">
+        <div class="regola-icon">👥</div>
+        <div class="regola-label">Posti per slot</div>
+        <div class="regola-text">Massimo 3 persone per sessione. Prenota in anticipo per assicurarti il posto!</div>
+      </div>
+      <div class="regola-item">
+        <div class="regola-icon">⏱️</div>
+        <div class="regola-label">Cancellazione</div>
+        <div class="regola-text">Puoi cancellare fino a <strong>24 ore prima</strong> della sessione. La lezione viene riaccreditata automaticamente.</div>
+      </div>
+      <div class="regola-item">
+        <div class="regola-icon">❌</div>
+        <div class="regola-label">Cancellazione tardiva</div>
+        <div class="regola-text">Le cancellazioni effettuate meno di 24 ore prima comportano la perdita della lezione.</div>
+      </div>
+      <div class="regola-item">
+        <div class="regola-icon">🔄</div>
+        <div class="regola-label">Lezioni recuperabili</div>
+        <div class="regola-text">Le assenze comunicate almeno 24 ore prima possono essere recuperate nel mese successivo. A discrezione dello studio.</div>
+      </div>
+      <div class="regola-item">
+        <div class="regola-icon">⚠️</div>
+        <div class="regola-label">Scadenza pacchetto</div>
+        <div class="regola-text">Le lezioni non utilizzate entro la data di scadenza del pacchetto vengono perse.</div>
+      </div>
+    </div>
+    <div class="regole-note">
+      Per qualsiasi necessità, modifica straordinaria o informazione contatta direttamente lo studio. Siamo qui per trovare la soluzione migliore per te! 💪
+    </div>
+  </div>
 </div>
 
 <div id="toast"></div>
@@ -137,7 +186,7 @@
 </div>
 
 <script>
-const BACKEND_URL = "https://script.google.com/macros/s/AKfycbzQILrSMbLyFsHXeDR4LAklN96QXXxGFm-A18tuBfQmUNwkTVs-NRdlpZDqOcsaJP9gfA/exec";
+const BACKEND_URL = "INSERISCI_QUI_URL_APPS_SCRIPT";
 const TOKEN = new URLSearchParams(window.location.search).get("t") || "";
 
 let cliente=null, slotsData=[], prenotazioni=[];
