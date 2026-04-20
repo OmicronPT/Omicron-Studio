@@ -232,7 +232,7 @@
 <div id="toast"></div>
 
 <script>
-const BACKEND_URL = "https://script.google.com/macros/s/AKfycbwaWMAK1OG2Bc8EnDqYc7cyqyt6AssxDCU7Xys-eCYPsZ5yfWBUyHkJ9Sl7Q1mlAc38Mg/exec";
+const BACKEND_URL = "https://script.google.com/macros/s/AKfycbyOkUZCtY0g1hhQ0rm3FTgGTv-odnNRSs7SFR_ezjfuuThO1pdnpZ8uXaPcGXliAYTukA/exec";
 const TOKEN = new URLSearchParams(window.location.search).get("t") || "";
 
 let cliente=null, slotsData=[], prenotazioni=[];
@@ -302,7 +302,28 @@ function renderPrenotazioni(){
   </div>`).join("");
 }
 
-// ── CALENDARIO ─────────────────────────────────────────────
+// ── FESTIVITÀ ─────────────────────────────────────────────
+function _pasquaJS(anno){
+  const a=anno%19,b=Math.floor(anno/100),c=anno%100,d=Math.floor(b/4),e=b%4;
+  const f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30;
+  const i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451);
+  const mese=Math.floor((h+l-7*m+114)/31),giorno=((h+l-7*m+114)%31)+1;
+  return new Date(anno,mese-1,giorno);
+}
+function _festivitaJS(anno){
+  const fisse=new Set(["01-01","01-06","04-25","05-01","06-02","08-15","11-01","12-08","12-25","12-26","09-19]);
+  const p=_pasquaJS(anno),pm=new Date(p);pm.setDate(pm.getDate()+1);
+  const fmt=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  const mobili=new Set([fmt(p),fmt(pm)]);
+  return{fisse,mobili};
+}
+function _isFestivoJS(dateStr){
+  const d=new Date(dateStr+"T12:00:00"),anno=d.getFullYear();
+  const{fisse,mobili}=_festivitaJS(anno);
+  return fisse.has(dateStr.substring(5))||mobili.has(dateStr);
+}
+
+// ── CALENDARIO ─────────────────────────────────────────────────
 function calMese(delta){
   calMeseN+=delta;
   if(calMeseN>11){calMeseN=0;calAnno++;}
@@ -343,6 +364,7 @@ function renderCal(){
     const dateStr=date.getFullYear()+"-"+String(date.getMonth()+1).padStart(2,"0")+"-"+String(date.getDate()).padStart(2,"0");
     const dow=date.getDay();
     const isWeekend=dow===0||dow===6;
+    const isFestivo=!isWeekend&&_isFestivoJS(dateStr);
     const isOggi=date.getTime()===oggi.getTime();
     const isPast=date<oggi;
     const info=slotMap[dateStr];
@@ -351,7 +373,7 @@ function renderCal(){
     let cls="cal-cell";
     let dot="";
 
-    if(isWeekend) cls+=" weekend";
+    if(isWeekend||isFestivo) cls+=" weekend";
     else if(isPast) cls+=" passato";
     else if(!info) cls+=" bloccato";
     else {
@@ -368,30 +390,11 @@ function renderCal(){
     cells+=`<div class="${cls}" ${click}>${d}${dot}</div>`;
   }
 
-// Celle dopo — completano l'ultima settimana con giorni del mese successivo
-const rimaste=(7-(startDow+ultimo.getDate())%7)%7;
-for(let i=1;i<=rimaste;i++){
-  const date=new Date(calAnno,calMeseN+1,i);
-  const dateStr=date.getFullYear()+"-"+String(date.getMonth()+1).padStart(2,"0")+"-"+String(date.getDate()).padStart(2,"0");
-  const dow=date.getDay();
-  const isWeekend=dow===0||dow===6;
-  const info=slotMap[dateStr];
-  const oggi2=new Date(); oggi2.setHours(0,0,0,0);
-  const isPast=date<oggi2;
-  let cls="cal-cell";
-  let dot="";
-  if(isWeekend) cls+=" weekend";
-  else if(isPast) cls+=" passato";
-  else if(!info) cls+=" bloccato";
-  else{
-    const liberi=info.slots.filter(s=>!s.prenotato&&s.postiLiberi>0);
-    if(liberi.length===0) cls+=" pieno";
-    else cls+=" disponibile";
-    dot=`<div class="cal-dot"></div>`;
+  // Celle dopo
+  const rimaste=(7-(startDow+ultimo.getDate())%7)%7;
+  for(let i=1;i<=rimaste;i++){
+    cells+=`<div class="cal-cell other-month">${i}</div>`;
   }
-  const click=(!isWeekend&&!isPast&&info)?`onclick="selezionaGiorno('${dateStr}')"` : "";
-  cells+=`<div class="${cls}" ${click}>${i}${dot}</div>`;
-}
 
   document.getElementById("cal-grid").innerHTML=cells;
 }
