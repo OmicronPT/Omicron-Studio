@@ -371,6 +371,44 @@
   </div>
 </div>
 
+<!-- MODAL RIPETIZIONE BLOCCO -->
+<div class="overlay" id="ov-ripetizione">
+  <div class="modal">
+    <div class="modal-title">Blocca slot</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px" id="rip-data-label"></div>
+    <div class="form-grid">
+      <div class="form-group" style="grid-column:1/-1">
+        <label class="form-label">Motivo (opzionale)</label>
+        <input class="form-input" type="text" id="rip-motivo" placeholder="Es. Impegno personale, pausa..."/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Ripetizione</label>
+        <select class="form-select" id="rip-tipo" onchange="toggleRipetizione()">
+          <option value="none">Solo questo slot</option>
+          <option value="weeks">Per N settimane</option>
+          <option value="forever">Per sempre (fino a revoca)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Giorni da bloccare</label>
+        <select class="form-select" id="rip-giorni">
+          <option value="single">Solo questo giorno</option>
+          <option value="weekday">Stesso giorno ogni settimana</option>
+          <option value="allFeriali">Tutti i giorni feriali</option>
+        </select>
+      </div>
+      <div class="form-group" id="rip-settimane-group" style="display:none;grid-column:1/-1">
+        <label class="form-label">Numero di settimane</label>
+        <input class="form-input" type="number" id="rip-settimane" value="4" min="1" max="52"/>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="chiudiModal('ov-ripetizione')">Annulla</button>
+      <button class="btn btn-warn" onclick="salvaBloccoCon()">🔒 Blocca</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -684,16 +722,60 @@ function apriDettaglioGiorno(dateStr){
   apriModal("ov-giorno");
 }
 
-async function bloccaSlotSingolo(dateStr, oraInizio, oraFine){
-  const res=await post({action:"adminAddBlocco",data:dateStr,oraInizio,oraFine,motivo:"Slot bloccato"});
+let _pendBlocco={};
+
+function bloccaSlotSingolo(dateStr, oraInizio, oraFine){
+  _pendBlocco={dateStr, oraInizio, oraFine};
+  // Precompila data nel modal
+  document.getElementById("rip-data-label").textContent=dateStr+" "+oraInizio;
+  document.getElementById("rip-tipo").value="none";
+  document.getElementById("rip-giorni").value="single";
+  document.getElementById("rip-settimane-group").style.display="none";
+  document.getElementById("rip-motivo").value="";
+  apriModal("ov-ripetizione");
+}
+
+async function salvaBloccoCon(){
+  const tipo=document.getElementById("rip-tipo").value;
+  const giorni=document.getElementById("rip-giorni").value;
+  const nSett=parseInt(document.getElementById("rip-settimane").value)||2;
+  const motivo=document.getElementById("rip-motivo").value||"Slot bloccato";
+  chiudiModal("ov-ripetizione");
+
+  const res=await post({
+    action:"adminAddBlocco",
+    data:_pendBlocco.dateStr,
+    oraInizio:_pendBlocco.oraInizio,
+    oraFine:_pendBlocco.oraFine,
+    motivo, ripetizione:tipo, nSettimane:nSett, giorni
+  });
   if(res.error){toast(res.error,"err");return;}
-  toast("Slot bloccato","ok");
+  const msg=res.totale>1?`${res.totale} blocchi creati!`:"Slot bloccato";
+  toast(msg,"ok");
   calData=await get("adminCalendario");
   renderCal();
-  apriDettaglioGiorno(dateStr);
+  apriDettaglioGiorno(_pendBlocco.dateStr);
 }
 
 async function rimuoviBloccoSlot(idBlocco, dateStr){
+  // Cerca se fa parte di un gruppo
+  const blocchi=await get("adminBlocchi");
+  const b=Array.isArray(blocchi)?blocchi.find(x=>x.id===idBlocco):null;
+  if(b&&b.gruppoId){
+    const altri=blocchi.filter(x=>x.gruppoId===b.gruppoId);
+    if(altri.length>1){
+      const tutto=confirm(`Questo blocco fa parte di una serie di ${altri.length} blocchi ricorrenti.\nRimuovere solo questo o tutta la serie?\n\nOK = tutta la serie\nAnnulla = solo questo`);
+      if(tutto){
+        const res=await post({action:"adminDelBloccoGruppo",gruppoId:b.gruppoId});
+        if(res.error){toast(res.error,"err");return;}
+        toast(`Serie di ${altri.length} blocchi rimossa`,"ok");
+        calData=await get("adminCalendario");
+        renderCal();
+        apriDettaglioGiorno(dateStr);
+        return;
+      }
+    }
+  }
   const res=await post({action:"adminDelBlocco",id:idBlocco});
   if(res.error){toast(res.error,"err");return;}
   toast("Slot sbloccato","ok");
@@ -895,6 +977,11 @@ async function eliminaCliente(id){
 }
 
 // ── UTILS ─────────────────────────────────────────────────
+function toggleRipetizione(){
+  const tipo=document.getElementById("rip-tipo").value;
+  document.getElementById("rip-settimane-group").style.display=tipo==="weeks"?"flex":"none";
+}
+
 function apriModal(id){document.getElementById(id).classList.add("open");}
 function chiudiModal(id){document.getElementById(id).classList.remove("open");}
 document.querySelectorAll(".overlay").forEach(ov=>ov.addEventListener("click",e=>{if(e.target===ov)ov.classList.remove("open");}));
