@@ -130,6 +130,10 @@
     .slot-item.occupato{border-color:rgba(232,80,10,.3);background:rgba(232,80,10,.04)}
     .slot-item.pieno{border-color:rgba(220,38,38,.3);background:rgba(220,38,38,.04)}
     .slot-item.bloccato{border-color:rgba(107,107,107,.25);background:rgba(107,107,107,.06);opacity:.7}
+    .slot-item.cliccabile{cursor:pointer;transition:all .18s}
+    .slot-item.cliccabile:hover{border-color:var(--accent);background:rgba(232,80,10,.04)}
+    .slot-item.bloccato.cliccabile:hover{border-color:#dc2626;background:rgba(220,38,38,.08)}
+    .slot-toggle{font-size:11px;margin-top:4px;color:var(--muted)}
     .slot-ora{font-size:15px;color:var(--text);margin-bottom:4px}
     .slot-info{font-size:11px;color:var(--muted)}
     .slot-clienti{font-size:11px;color:var(--acc2);margin-top:3px}
@@ -352,15 +356,13 @@
       <div><div class="det-name" id="det-name"></div><div class="det-pkg" id="det-pkg"></div></div>
     </div>
     <div class="det-tabs">
-  <div class="det-tab active" onclick="switchTab('anagrafica',this)">Anagrafica</div>
-  <div class="det-tab" onclick="switchTab('pacchetto',this)">Pacchetto</div>
-  <div class="det-tab" onclick="switchTab('rinnovo',this)">Rinnovo</div>
-  <div class="det-tab" onclick="switchTab('anamnesi',this)">Anamnesi</div>
-</div>
-<div class="det-tab-content active" id="tab-anagrafica"></div>
-<div class="det-tab-content" id="tab-pacchetto"></div>
-<div class="det-tab-content" id="tab-rinnovo"></div>
-<div class="det-tab-content" id="tab-anamnesi"></div>
+      <div class="det-tab active" onclick="switchTab('anagrafica',this)">Anagrafica</div>
+      <div class="det-tab" onclick="switchTab('pacchetto',this)">Pacchetto</div>
+      <div class="det-tab" onclick="switchTab('anamnesi',this)">Anamnesi</div>
+    </div>
+    <div class="det-tab-content active" id="tab-anagrafica"></div>
+    <div class="det-tab-content" id="tab-pacchetto"></div>
+    <div class="det-tab-content" id="tab-anamnesi"></div>
     <div class="modal-actions">
       <button class="btn btn-danger btn-sm" id="btn-del-cliente">Elimina</button>
       <button class="btn btn-secondary btn-sm" id="btn-edit-cliente">Modifica</button>
@@ -590,43 +592,114 @@ async function eliminaBlocco(id){
 }
 
 // ── DETTAGLIO GIORNO ──────────────────────────────────────
+// Genera tutti gli slot teorici del giorno (client-side, per l'admin)
+function _slotDelGiornoAdmin(){
+  const slots=[];
+  // 8:30 = 510min, 19:00 = 1140min (ultimo inizio per sessione 60min)
+  for(let m=510;m<=1140;m+=30) slots.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));
+  return slots;
+}
+
 function apriDettaglioGiorno(dateStr){
   const info=Array.isArray(calData)?calData.find(d=>d.data===dateStr):null;
-  if(!info){apriBloccaGiornoData(dateStr);return;}
   giornoSelezionato=dateStr;
-  document.getElementById("giorno-title").textContent=info.dataLabel;
+  const dataLabel=info?info.dataLabel:dateStr;
+  document.getElementById("giorno-title").textContent=dataLabel;
 
   let html="";
-  if(info.bloccatoTutto){
-    html='<div style="color:#e74c3c;padding:16px 0">🔒 Giornata bloccata</div>';
+
+  if(info&&info.bloccatoTutto){
+    html='<div style="color:#dc2626;padding:12px 0 16px">🔒 Giornata interamente bloccata</div>';
     if(info.blocchi.length){
       html+=`<div class="blocchi-list">${info.blocchi.map(b=>`<div class="blocco-item">
-        <span>${b.motivo||'Blocco'}</span>
+        <span>${b.motivo||'Blocco giornata'}</span>
         <button class="btn btn-danger btn-sm" onclick="eliminaBlocco('${b.id}');chiudiModal('ov-giorno')">Rimuovi</button>
       </div>`).join("")}</div>`;
     }
-  } else {
-    if(info.slots.length){
-      html+=`<div class="slot-grid" style="margin-bottom:16px">
-        ${info.slots.map(s=>`<div class="slot-item ${s.bloccato?'bloccato':s.count>=3?'pieno':'occupato'}">
-          <div class="slot-ora">${s.ora}</div>
-          <div class="slot-info">${s.bloccato?'🔒 bloccato':`${s.count}/3 posti`}</div>
-          ${s.clienti.length?`<div class="slot-clienti">${s.clienti.join(", ")}</div>`:''}
-        </div>`).join("")}
-      </div>`;
-    } else {
-      html='<div class="empty-state" style="padding:20px">Nessuna prenotazione</div>';
-    }
-    if(info.blocchi.length){
-      html+=`<div style="font-family:var(--serif);font-size:16px;margin-bottom:10px">Blocchi orari</div>
-      <div class="blocchi-list">${info.blocchi.map(b=>`<div class="blocco-item">
-        <span>🔒 ${b.oraInizio} – ${b.oraFine}${b.motivo?' — '+b.motivo:''}</span>
-        <button class="btn btn-danger btn-sm" onclick="eliminaBlocco('${b.id}');chiudiModal('ov-giorno')">Rimuovi</button>
-      </div>`).join("")}</div>`;
-    }
+    document.getElementById("giorno-content").innerHTML=html;
+    apriModal("ov-giorno");
+    return;
   }
+
+  // Costruisci mappa blocchi orari per questo giorno
+  const blocchiGiorno=info?info.blocchi:[];
+  const slotsInfo=info?info.slots:[];
+
+  // Mappa slot occupati: ora -> {count, clienti, bloccato, idBlocco}
+  const slotMap={};
+  slotsInfo.forEach(s=>{
+    slotMap[s.ora]={count:s.count,clienti:s.clienti,bloccato:s.bloccato};
+  });
+
+  // Trova blocchi singoli slot (quelli con oraInizio e oraFine)
+  const blocchiSlot={};
+  blocchiGiorno.forEach(b=>{
+    if(b.oraInizio&&b.oraFine) blocchiSlot[b.oraInizio]=b.id;
+  });
+
+  // Genera tutti gli slot del giorno
+  const tuttiSlot=_slotDelGiornoAdmin();
+  html+=`<div style="font-size:12px;color:var(--muted);margin-bottom:12px">Clicca uno slot per bloccarlo o sbloccarlo</div>`;
+  html+=`<div class="slot-grid" style="margin-bottom:16px">`;
+  tuttiSlot.forEach(ora=>{
+    const s=slotMap[ora]||{count:0,clienti:[],bloccato:false};
+    const isBloccat=s.bloccato||!!blocchiSlot[ora];
+    const idBlocco=blocchiSlot[ora]||null;
+    const isPieno=!isBloccat&&s.count>=3;
+    const isOccupato=!isBloccat&&s.count>0&&s.count<3;
+    let cls="slot-item cliccabile";
+    if(isBloccat) cls+=" bloccato";
+    else if(isPieno) cls+=" pieno";
+    else if(isOccupato) cls+=" occupato";
+
+    const oraFine=()=>{const m=parseInt(ora.split(":")[0])*60+parseInt(ora.split(":")[1])+60;return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0");};
+
+    let azione="";
+    if(isBloccat&&idBlocco){
+      azione=`onclick="rimuoviBloccoSlot('${idBlocco}','${dateStr}')"`;
+    } else if(!isBloccat){
+      azione=`onclick="bloccaSlotSingolo('${dateStr}','${ora}','${oraFine()}')"`
+    }
+
+    html+=`<div class="${cls}" ${azione}>
+      <div class="slot-ora">${ora}</div>
+      <div class="slot-info" style="font-size:11px;color:var(--muted)">${isBloccat?'🔒 bloccato':isOccupato?`${s.count}/3 posti`:isPieno?'completo':'libero'}</div>
+      ${s.clienti&&s.clienti.length?`<div class="slot-clienti">${s.clienti.join(", ")}</div>`:''}
+      <div class="slot-toggle">${isBloccat?'tocca per sbloccare':'tocca per bloccare'}</div>
+    </div>`;
+  });
+  html+=`</div>`;
+
+  // Blocchi orari esistenti (fasce)
+  const blocchiFascia=blocchiGiorno.filter(b=>b.oraInizio&&b.oraFine&&!blocchiSlot[b.oraInizio]);
+  if(blocchiFascia.length){
+    html+=`<div style="font-family:var(--serif);font-size:15px;margin-bottom:8px">Blocchi fascia oraria</div>
+    <div class="blocchi-list">${blocchiFascia.map(b=>`<div class="blocco-item">
+      <span>🔒 ${b.oraInizio} – ${b.oraFine}${b.motivo?' — '+b.motivo:''}</span>
+      <button class="btn btn-danger btn-sm" onclick="eliminaBlocco('${b.id}');apriDettaglioGiorno('${dateStr}')">Rimuovi</button>
+    </div>`).join("")}</div>`;
+  }
+
   document.getElementById("giorno-content").innerHTML=html;
   apriModal("ov-giorno");
+}
+
+async function bloccaSlotSingolo(dateStr, oraInizio, oraFine){
+  const res=await post({action:"adminAddBlocco",data:dateStr,oraInizio,oraFine,motivo:"Slot bloccato"});
+  if(res.error){toast(res.error,"err");return;}
+  toast("Slot bloccato","ok");
+  calData=await get("adminCalendario");
+  renderCal();
+  apriDettaglioGiorno(dateStr);
+}
+
+async function rimuoviBloccoSlot(idBlocco, dateStr){
+  const res=await post({action:"adminDelBlocco",id:idBlocco});
+  if(res.error){toast(res.error,"err");return;}
+  toast("Slot sbloccato","ok");
+  calData=await get("adminCalendario");
+  renderCal();
+  apriDettaglioGiorno(dateStr);
 }
 
 function apriBloccaGiornoDataDaDettaglio(){
@@ -725,7 +798,7 @@ async function apriDettaglioCliente(id){
     <button class="btn btn-secondary btn-sm" onclick="editLezioni('${c.id}',${c.lezioniRim})">Modifica lezioni</button>
     <button class="btn btn-secondary btn-sm" onclick="editScadenza('${c.id}','${c.dataScad}')">Modifica scadenza</button></div>`;
   document.getElementById("tab-anamnesi").innerHTML=c.noteAnamnesi?`<div class="note-box">${c.noteAnamnesi}</div>`:'<div class="empty-state" style="padding:24px">Nessuna nota</div>';
-  const tabRinnovo=document.getElementById("tab-rinnovo"); if(tabRinnovo) tabRinnovo.innerHTML="";
+  document.getElementById("tab-rinnovo").innerHTML="";
   document.querySelectorAll(".det-tab").forEach((t,i)=>t.classList.toggle("active",i===0));
   document.querySelectorAll(".det-tab-content").forEach((t,i)=>t.classList.toggle("active",i===0));
   document.getElementById("btn-del-cliente").style.display="";document.getElementById("btn-edit-cliente").style.display="";
