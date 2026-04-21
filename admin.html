@@ -526,6 +526,37 @@ function renderCal(){
 }
 
 // ── DISPONIBILITÀ ─────────────────────────────────────────
+// ── FUNZIONE COMUNE rendering slot ────────────────────────
+// Usata sia in loadDisponibilita che in apriDettaglioGiorno
+function _renderSlotItem(ora, s, dateStr, blocchiSlot, cliccabile=false){
+  const isBloccat = s.bloccato || !!blocchiSlot[ora];
+  const idBlocco  = blocchiSlot[ora] || null;
+  const isPieno   = !isBloccat && s.count >= 3;
+  const isOccupato= !isBloccat && s.count > 0 && s.count < 3;
+  const oraFine   = ()=>{const m=parseInt(ora.split(":")[0])*60+parseInt(ora.split(":")[1])+60;return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0");};
+
+  let cls = "slot-item" + (cliccabile?" cliccabile":"");
+  if(isBloccat)   cls += " bloccato";
+  else if(isPieno) cls += " pieno";
+  else if(isOccupato) cls += " occupato";
+
+  let azione = "";
+  if(cliccabile){
+    if(isBloccat && idBlocco) azione = `onclick="rimuoviBloccoSlot('${idBlocco}','${dateStr}')"`;
+    else if(!isBloccat)       azione = `onclick="bloccaSlotSingolo('${dateStr}','${ora}','${oraFine()}')"`;
+  }
+
+  const label = isBloccat ? '🔒 bloccato' : isOccupato ? `${s.count}/3 posti` : isPieno ? 'completo' : 'libero';
+  const toggle= cliccabile ? `<div class="slot-toggle">${isBloccat?'tocca per sbloccare':'tocca per bloccare'}</div>` : '';
+
+  return `<div class="${cls}" ${azione}>
+    <div class="slot-ora">${ora}</div>
+    <div class="slot-info" style="font-size:11px;color:var(--muted)">${label}</div>
+    ${s.clienti&&s.clienti.length?`<div class="slot-clienti">${s.clienti.join(", ")}</div>`:''}
+    ${toggle}
+  </div>`;
+}
+
 async function loadDisponibilita(){
   document.getElementById("disp-content").innerHTML='<div class="spin"></div>';
   const [cal,blocchi]=await Promise.all([get("adminCalendario"),get("adminBlocchi")]);
@@ -550,17 +581,16 @@ async function loadDisponibilita(){
       html+='<div class="empty-state">Nessuna prenotazione nei prossimi giorni</div>';
     } else {
       html+=`<div class="section-header"><div class="section-title">Prossimi giorni</div></div>`;
-      html+=conPrenotazioni.map(g=>`
-        <div class="slot-day">
+      html+=conPrenotazioni.map(g=>{
+        // Costruisci mappa blocchiSlot per questo giorno
+        const bs={};
+        if(g.blocchi) g.blocchi.forEach(b=>{ if(b.oraInizio&&b.oraFine) bs[b.oraInizio]=b.id; });
+        const slotsHtml=g.slots.map(s=>_renderSlotItem(s.ora,s,g.data,bs,false)).join("");
+        return `<div class="slot-day">
           <div class="slot-day-title">${g.dataLabel}${g.bloccatoTutto?' <span style="color:#e74c3c;font-size:13px">🔒 bloccato</span>':''}</div>
-          <div class="slot-grid">
-            ${g.slots.map(s=>`<div class="slot-item ${s.bloccato?'bloccato':s.count>=3?'pieno':'occupato'}">
-              <div class="slot-ora">${s.ora}</div>
-              <div class="slot-info">${s.bloccato?'🔒 bloccato':`${s.count}/3 posti`}</div>
-              ${s.clienti.length?`<div class="slot-clienti">${s.clienti.join(", ")}</div>`:''}
-            </div>`).join("")}
-          </div>
-        </div>`).join("");
+          <div class="slot-grid">${slotsHtml}</div>
+        </div>`;
+      }).join("");
     }
   }
 
@@ -666,36 +696,13 @@ function apriDettaglioGiorno(dateStr){
     if(b.oraInizio&&b.oraFine) blocchiSlot[b.oraInizio]=b.id;
   });
 
-  // Genera tutti gli slot del giorno
+  // Genera tutti gli slot del giorno usando funzione comune
   const tuttiSlot=_slotDelGiornoAdmin();
   html+=`<div style="font-size:12px;color:var(--muted);margin-bottom:12px">Clicca uno slot per bloccarlo o sbloccarlo</div>`;
   html+=`<div class="slot-grid" style="margin-bottom:16px">`;
   tuttiSlot.forEach(ora=>{
     const s=slotMap[ora]||{count:0,clienti:[],bloccato:false};
-    const isBloccat=s.bloccato||!!blocchiSlot[ora];
-    const idBlocco=blocchiSlot[ora]||null;
-    const isPieno=!isBloccat&&s.count>=3;
-    const isOccupato=!isBloccat&&s.count>0&&s.count<3;
-    let cls="slot-item cliccabile";
-    if(isBloccat) cls+=" bloccato";
-    else if(isPieno) cls+=" pieno";
-    else if(isOccupato) cls+=" occupato";
-
-    const oraFine=()=>{const m=parseInt(ora.split(":")[0])*60+parseInt(ora.split(":")[1])+60;return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0");};
-
-    let azione="";
-    if(isBloccat&&idBlocco){
-      azione=`onclick="rimuoviBloccoSlot('${idBlocco}','${dateStr}')"`;
-    } else if(!isBloccat){
-      azione=`onclick="bloccaSlotSingolo('${dateStr}','${ora}','${oraFine()}')"`
-    }
-
-    html+=`<div class="${cls}" ${azione}>
-      <div class="slot-ora">${ora}</div>
-      <div class="slot-info" style="font-size:11px;color:var(--muted)">${isBloccat?'🔒 bloccato':isOccupato?`${s.count}/3 posti`:isPieno?'completo':'libero'}</div>
-      ${s.clienti&&s.clienti.length?`<div class="slot-clienti">${s.clienti.join(", ")}</div>`:''}
-      <div class="slot-toggle">${isBloccat?'tocca per sbloccare':'tocca per bloccare'}</div>
-    </div>`;
+    html+=_renderSlotItem(ora,s,dateStr,blocchiSlot,true);
   });
   html+=`</div>`;
 
