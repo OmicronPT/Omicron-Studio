@@ -289,10 +289,7 @@
         <label class="form-label">Ora fine</label>
         <input class="form-input" type="time" id="b-fine"/>
       </div>
-      <div class="form-group" style="grid-column:1/-1">
-        <label class="form-label">Motivo (opzionale)</label>
-        <input class="form-input" type="text" id="b-motivo" placeholder="Es. Ferie, impegno personale..."/>
-      </div>
+
     </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="chiudiModal('ov-blocco')">Annulla</button>
@@ -355,16 +352,14 @@
       <div class="det-avatar" id="det-avatar"></div>
       <div><div class="det-name" id="det-name"></div><div class="det-pkg" id="det-pkg"></div></div>
     </div>
-   <div class="det-tabs">
-  <div class="det-tab active" onclick="switchTab('anagrafica',this)">Anagrafica</div>
-  <div class="det-tab" onclick="switchTab('pacchetto',this)">Pacchetto</div>
-  <div class="det-tab" onclick="switchTab('rinnovo',this)">Rinnovo</div>
-  <div class="det-tab" onclick="switchTab('anamnesi',this)">Anamnesi</div>
-</div>
-<div class="det-tab-content active" id="tab-anagrafica"></div>
-<div class="det-tab-content" id="tab-pacchetto"></div>
-<div class="det-tab-content" id="tab-rinnovo"></div>
-<div class="det-tab-content" id="tab-anamnesi"></div>
+    <div class="det-tabs">
+      <div class="det-tab active" onclick="switchTab('anagrafica',this)">Anagrafica</div>
+      <div class="det-tab" onclick="switchTab('pacchetto',this)">Pacchetto</div>
+      <div class="det-tab" onclick="switchTab('anamnesi',this)">Anamnesi</div>
+    </div>
+    <div class="det-tab-content active" id="tab-anagrafica"></div>
+    <div class="det-tab-content" id="tab-pacchetto"></div>
+    <div class="det-tab-content" id="tab-anamnesi"></div>
     <div class="modal-actions">
       <button class="btn btn-danger btn-sm" id="btn-del-cliente">Elimina</button>
       <button class="btn btn-secondary btn-sm" id="btn-edit-cliente">Modifica</button>
@@ -379,10 +374,7 @@
     <div class="modal-title">Blocca slot</div>
     <div style="font-size:13px;color:var(--muted);margin-bottom:16px" id="rip-data-label"></div>
     <div class="form-grid">
-      <div class="form-group" style="grid-column:1/-1">
-        <label class="form-label">Motivo (opzionale)</label>
-        <input class="form-input" type="text" id="rip-motivo" placeholder="Es. Impegno personale, pausa..."/>
-      </div>
+
       <div class="form-group">
         <label class="form-label">Ripetizione</label>
         <select class="form-select" id="rip-tipo" onchange="toggleRipetizione()">
@@ -545,7 +537,7 @@ async function loadDisponibilita(){
     html+=`<div class="section-header"><div class="section-title">Blocchi attivi</div></div>
     <div class="blocchi-list">
       ${blocchi.map(b=>`<div class="blocco-item">
-        <span>🔒 <b>${b.data}</b>${b.oraInizio?' '+b.oraInizio+' – '+b.oraFine:' (tutto il giorno)'}${b.motivo?' — '+b.motivo:''}</span>
+        <span>🔒 <b>${b.data}</b>${b.oraInizio?' '+b.oraInizio+' – '+b.oraFine:' (tutto il giorno)'}</span>
         <button class="btn btn-danger btn-sm" onclick="eliminaBlocco('${b.id}')">Rimuovi</button>
       </div>`).join("")}
     </div><div style="height:32px"></div>`;
@@ -581,7 +573,6 @@ function apriBloccaGiorno(){
   document.getElementById("b-data").value="";
   document.getElementById("b-inizio").value="";
   document.getElementById("b-fine").value="";
-  document.getElementById("b-motivo").value="";
   document.getElementById("b-fascia-group").style.display="none";
   document.getElementById("b-fascia-group2").style.display="none";
   apriModal("ov-blocco");
@@ -593,7 +584,6 @@ function apriBloccaGiornoData(data){
   document.getElementById("b-data").value=data;
   document.getElementById("b-inizio").value="";
   document.getElementById("b-fine").value="";
-  document.getElementById("b-motivo").value="";
   document.getElementById("b-fascia-group").style.display="none";
   document.getElementById("b-fascia-group2").style.display="none";
   apriModal("ov-blocco");
@@ -604,7 +594,6 @@ function apriBloccaFascia(){
   document.getElementById("b-data").value="";
   document.getElementById("b-inizio").value="";
   document.getElementById("b-fine").value="";
-  document.getElementById("b-motivo").value="";
   document.getElementById("b-fascia-group").style.display="flex";
   document.getElementById("b-fascia-group2").style.display="flex";
   apriModal("ov-blocco");
@@ -613,7 +602,7 @@ function apriBloccaFascia(){
 async function salvaBlocco(){
   const data=document.getElementById("b-data").value;
   if(!data){toast("Data obbligatoria","err");return;}
-  const res=await post({action:"adminAddBlocco",data,oraInizio:document.getElementById("b-inizio").value,oraFine:document.getElementById("b-fine").value,motivo:document.getElementById("b-motivo").value});
+  const res=await post({action:"adminAddBlocco",data,oraInizio:document.getElementById("b-inizio").value,oraFine:document.getElementById("b-fine").value,motivo:""});
   if(res.error){toast(res.error,"err");return;}
   toast("Blocco aggiunto!","ok");
   chiudiModal("ov-blocco");
@@ -652,7 +641,7 @@ function apriDettaglioGiorno(dateStr){
     html='<div style="color:#dc2626;padding:12px 0 16px">🔒 Giornata interamente bloccata</div>';
     if(info.blocchi.length){
       html+=`<div class="blocchi-list">${info.blocchi.map(b=>`<div class="blocco-item">
-        <span>${b.motivo||'Blocco giornata'}</span>
+        <span>🔒 Giornata bloccata</span>
         <button class="btn btn-danger btn-sm" onclick="eliminaBlocco('${b.id}');chiudiModal('ov-giorno')">Rimuovi</button>
       </div>`).join("")}</div>`;
     }
@@ -715,7 +704,7 @@ function apriDettaglioGiorno(dateStr){
   if(blocchiFascia.length){
     html+=`<div style="font-family:var(--serif);font-size:15px;margin-bottom:8px">Blocchi fascia oraria</div>
     <div class="blocchi-list">${blocchiFascia.map(b=>`<div class="blocco-item">
-      <span>🔒 ${b.oraInizio} – ${b.oraFine}${b.motivo?' — '+b.motivo:''}</span>
+      <span>🔒 ${b.oraInizio} – ${b.oraFine}</span>
       <button class="btn btn-danger btn-sm" onclick="eliminaBlocco('${b.id}');apriDettaglioGiorno('${dateStr}')">Rimuovi</button>
     </div>`).join("")}</div>`;
   }
@@ -733,7 +722,6 @@ function bloccaSlotSingolo(dateStr, oraInizio, oraFine){
   document.getElementById("rip-tipo").value="none";
   document.getElementById("rip-giorni").value="single";
   document.getElementById("rip-settimane-group").style.display="none";
-  document.getElementById("rip-motivo").value="";
   apriModal("ov-ripetizione");
 }
 
@@ -741,7 +729,7 @@ async function salvaBloccoCon(){
   const tipo=document.getElementById("rip-tipo").value;
   const giorni=document.getElementById("rip-giorni").value;
   const nSett=parseInt(document.getElementById("rip-settimane").value)||2;
-  const motivo=document.getElementById("rip-motivo").value||"Slot bloccato";
+  const motivo="Blocco";
   chiudiModal("ov-ripetizione");
 
   const res=await post({
