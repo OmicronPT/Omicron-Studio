@@ -148,6 +148,16 @@
     @keyframes sp{to{transform:rotate(360deg)}}
     .empty{text-align:center;padding:32px;color:var(--muted)}
 
+    .slot.attesa{border-color:rgba(217,119,6,.4);background:rgba(217,119,6,.05);cursor:pointer}
+    .slot.attesa:hover{border-color:rgba(217,119,6,.7);background:rgba(217,119,6,.1)}
+    .slot-attesa-badge{font-size:11px;color:#b45309;margin-top:2px}
+
+    /* Lista attesa attiva */
+    .attesa-list{display:flex;flex-direction:column;gap:8px;margin-bottom:28px}
+    .attesa-item{background:rgba(217,119,6,.06);border:1px solid rgba(217,119,6,.25);border-radius:8px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .attesa-data{font-family:var(--serif);font-size:16px;text-transform:capitalize}
+    .attesa-ora{font-size:12px;color:var(--muted);margin-top:2px}
+
     @media(max-width:480px){
       .regole-bar{gap:4px}
       .slot-grid{grid-template-columns:repeat(3,1fr)}
@@ -183,6 +193,13 @@
 <div class="wrap">
 
   <!-- Prenotazioni attive -->
+  <!-- Lista attesa attiva -->
+  <div id="sec-attesa" style="display:none">
+    <div class="section-title" style="color:#b45309">⏳ In lista d'attesa</div>
+    <div id="lista-attesa" class="attesa-list"></div>
+    <div class="divider"></div>
+  </div>
+
   <div id="sec-pre" style="display:none">
     <div class="section-title">Le mie prenotazioni</div>
     <div id="lista-pre" class="pre-list"></div>
@@ -232,10 +249,10 @@
 <div id="toast"></div>
 
 <script>
-const BACKEND_URL = "https://script.google.com/macros/s/AKfycbxqUb_RHi1Y8deS_AqsWhwQknxRmyqge7GzQjr3EjH9fIt_sBfDsCdCfCmeIpeNU2v3lw/exec";
+const BACKEND_URL = "https://script.google.com/macros/s/AKfycbxQUYsOIOZei8WemX1pdmQAm9mdsfWt2P8Cjdhrtxtqlu22I5ACWAiNPVFecVGkq8uwPg/exec";
 const TOKEN = new URLSearchParams(window.location.search).get("t") || "";
 
-let cliente=null, slotsData=[], prenotazioni=[];
+let cliente=null, slotsData=[], prenotazioni=[], listaAttesa=[];
 let calAnno=new Date().getFullYear(), calMeseN=new Date().getMonth();
 let giornoSelezionato=null;
 
@@ -263,10 +280,11 @@ async function init(){
   if(!TOKEN){showError("🔒","Link non valido. Contatta lo studio.");return;}
   if(BACKEND_URL==="INSERISCI_QUI_URL_APPS_SCRIPT"){showError("⚙️","Backend non configurato.");return;}
   try{
-    const [c,s,p]=await Promise.all([get("getCliente"),get("getSlotDisponibili"),get("getPrenotazioni")]);
+    const [c,s,p,a]=await Promise.all([get("getCliente"),get("getSlotDisponibili"),get("getPrenotazioni"),get("getListaAttesa")]);
     if(c.error)throw new Error(c.error);
-    cliente=c; slotsData=Array.isArray(s)?s:[]; prenotazioni=Array.isArray(p)?p:[];
+    cliente=c; slotsData=Array.isArray(s)?s:[]; prenotazioni=Array.isArray(p)?p:[]; listaAttesa=Array.isArray(a)?a:[];
     renderClientePill();
+    renderListaAttesa();
     renderPrenotazioni();
     renderCal();
   }catch(e){showError("⚠️",e.message);}
@@ -286,6 +304,25 @@ function renderClientePill(){
   const lezEl=document.getElementById("cliente-lezioni");
   lezEl.textContent=`${cliente.lezioniRim} lezioni · scade ${fmtData(cliente.dataScad)}`;
   lezEl.className="cliente-lezioni"+(warn||gg<=7?" warn":"");
+}
+
+// ── LISTA ATTESA ───────────────────────────────────────────
+function renderListaAttesa(){
+  const sec=document.getElementById("sec-attesa"), lista=document.getElementById("lista-attesa");
+  if(!listaAttesa.length){sec.style.display="none";return;}
+  sec.style.display="block";
+  lista.innerHTML=listaAttesa.map(a=>`<div class="attesa-item">
+    <div>
+      <div class="attesa-data">${fmtDataLabel(a.data)}</div>
+      <div class="attesa-ora">🕐 ${a.oraInizio}</div>
+    </div>
+    <button class="btn btn-sm" style="border:1px solid rgba(217,119,6,.4);color:#b45309" onclick="cancellaAttesa('${a.id}')">Esci dalla lista</button>
+  </div>`).join("");
+}
+
+function fmtDataLabel(dateStr){
+  const d=new Date(dateStr+"T12:00:00");
+  return d.toLocaleDateString("it-IT",{weekday:"long",day:"numeric",month:"long"});
 }
 
 // ── PRENOTAZIONI ───────────────────────────────────────────
@@ -421,7 +458,21 @@ function selezionaGiorno(dateStr){
     <div class="slot-grid">
       ${info.slots.map(s=>{
         const prenotato=s.prenotato||preSet.has(dateStr+"_"+s.ora);
+        const inAttesaSet=new Set(listaAttesa.map(a=>a.data+"_"+a.oraInizio));
+        const inAttesa=inAttesaSet.has(dateStr+"_"+s.ora);
+        const pieno=s.postiLiberi===0&&!prenotato;
         const scarsi=s.postiLiberi===1;
+
+        if(pieno&&!prenotato){
+          // Slot pieno - mostra pulsante lista attesa
+          return`<div class="slot ${inAttesa?'attesa':''}" ${inAttesa?'':`onclick="apriModalAttesa('${dateStr}','${s.ora}','${s.oraFine}','${info.dataLabel}')"`}>
+            <div class="slot-ora">${s.ora}</div>
+            <div class="slot-fine">fino alle ${s.oraFine}</div>
+            <div class="slot-posti" style="color:#dc2626">al completo</div>
+            ${inAttesa?'<div class="slot-attesa-badge">⏳ In lista</div>':'<div class="slot-attesa-badge">+ Lista attesa</div>'}
+          </div>`;
+        }
+
         return`<div class="slot ${prenotato?'prenotato':''}" ${prenotato?'':` onclick="apriModalPrenota('${dateStr}','${s.ora}','${s.oraFine}','${info.dataLabel}')"`}>
           <div class="slot-ora">${s.ora}</div>
           <div class="slot-fine">fino alle ${s.oraFine}</div>
@@ -450,9 +501,9 @@ async function prenota(data,ora){
   if(res.error){toast(res.error,"err");return;}
   toast("Prenotazione confermata! 🎉","ok");
   cliente.lezioniRim=res.lezioniRimanenti;
-  const[s,p]=await Promise.all([get("getSlotDisponibili"),get("getPrenotazioni")]);
-  slotsData=Array.isArray(s)?s:[]; prenotazioni=Array.isArray(p)?p:[];
-  renderClientePill(); renderPrenotazioni(); renderCal();
+  const[s,p,a]=await Promise.all([get("getSlotDisponibili"),get("getPrenotazioni"),get("getListaAttesa")]);
+  slotsData=Array.isArray(s)?s:[]; prenotazioni=Array.isArray(p)?p:[]; listaAttesa=Array.isArray(a)?a:[];
+  renderClientePill(); renderListaAttesa(); renderPrenotazioni(); renderCal();
   if(giornoSelezionato) selezionaGiorno(giornoSelezionato);
 }
 
@@ -460,6 +511,35 @@ function apriModalCanc(id,dataLabel,ora){
   document.getElementById("modal-canc-txt").textContent=`Cancelli il ${dataLabel} alle ${ora}? La lezione verrà riaccreditata.`;
   document.getElementById("btn-ok-canc").onclick=()=>cancella(id);
   apriModal("ov-canc");
+}
+
+function apriModalAttesa(data,ora,oraFine,dataLabel){
+  document.getElementById("modal-txt").textContent=`Vuoi entrare in lista d'attesa per ${dataLabel} alle ${ora}? Ti avviseremo subito se si libera un posto.`;
+  document.getElementById("btn-ok-prenota").textContent="Entra in lista";
+  document.getElementById("btn-ok-prenota").onclick=()=>iscriviAttesa(data,ora);
+  apriModal("ov");
+}
+
+async function iscriviAttesa(data,oraInizio){
+  chiudiModal("ov");
+  document.getElementById("btn-ok-prenota").textContent="Conferma";
+  const res=await post({action:"iscriviListaAttesa",data,oraInizio});
+  if(res.error){toast(res.error,"err");return;}
+  toast(`Sei in lista d'attesa! Posizione: ${res.posizione}`,"ok");
+  const[s,p,a]=await Promise.all([get("getSlotDisponibili"),get("getPrenotazioni"),get("getListaAttesa")]);
+  slotsData=Array.isArray(s)?s:[]; prenotazioni=Array.isArray(p)?p:[]; listaAttesa=Array.isArray(a)?a:[];
+  renderClientePill(); renderListaAttesa(); renderPrenotazioni(); renderCal();
+  if(giornoSelezionato) selezionaGiorno(giornoSelezionato);
+}
+
+async function cancellaAttesa(id){
+  const res=await post({action:"cancellaListaAttesa",id});
+  if(res.error){toast(res.error,"err");return;}
+  toast("Rimosso dalla lista d'attesa","ok");
+  const[s,p,a]=await Promise.all([get("getSlotDisponibili"),get("getPrenotazioni"),get("getListaAttesa")]);
+  slotsData=Array.isArray(s)?s:[]; prenotazioni=Array.isArray(p)?p:[]; listaAttesa=Array.isArray(a)?a:[];
+  renderClientePill(); renderListaAttesa(); renderPrenotazioni(); renderCal();
+  if(giornoSelezionato) selezionaGiorno(giornoSelezionato);
 }
 
 async function cancella(id){
