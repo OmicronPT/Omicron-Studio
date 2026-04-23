@@ -356,11 +356,13 @@
       <div class="det-tab active" onclick="switchTab('anagrafica',this)">Anagrafica</div>
       <div class="det-tab" onclick="switchTab('pacchetto',this)">Pacchetto</div>
       <div class="det-tab" onclick="switchTab('rinnovo',this)">Rinnovo</div>
+      <div class="det-tab" onclick="switchTab('schede',this)">Schede</div>
       <div class="det-tab" onclick="switchTab('anamnesi',this)">Anamnesi</div>
     </div>
     <div class="det-tab-content active" id="tab-anagrafica"></div>
     <div class="det-tab-content" id="tab-pacchetto"></div>
     <div class="det-tab-content" id="tab-rinnovo"></div>
+    <div class="det-tab-content" id="tab-schede"></div>
     <div class="det-tab-content" id="tab-anamnesi"></div>
     <div class="modal-actions">
       <button class="btn btn-danger btn-sm" id="btn-del-cliente">Elimina</button>
@@ -408,7 +410,7 @@
 <div id="toast"></div>
 
 <script>
-const BACKEND_URL = "https://script.google.com/macros/s/AKfycbwQ-BXp6ibqJiwidMvsGZCftKjkvyHsTRhhoVcKcqQBTd9koEjM0dfMozoHgri1FAgi/exec";
+const BACKEND_URL = "https://script.google.com/macros/s/AKfycbwJ6gsoBIcYo0AVZBc9Otw74bidbI7GwjHtDrUFN6PeVb6jF_VJbZLrEavRC_MO07Yccg/exec";
 const GITHUB_BASE = "https://OmicronPT.github.io/Omicron-Studio/cliente.html?t=";
 
 let PW="", pacchetti=[], calAnno=new Date().getFullYear(), calMeseN=new Date().getMonth();
@@ -880,6 +882,7 @@ async function apriDettaglioCliente(id){
     <button class="btn btn-secondary btn-sm" onclick="editScadenza('${c.id}','${c.dataScad}')">Modifica scadenza</button></div>`;
   document.getElementById("tab-anamnesi").innerHTML=c.noteAnamnesi?`<div class="note-box">${c.noteAnamnesi}</div>`:'<div class="empty-state" style="padding:24px">Nessuna nota</div>';
   document.getElementById("tab-rinnovo").innerHTML="";
+  document.getElementById("tab-schede").innerHTML="";
   document.querySelectorAll(".det-tab").forEach((t,i)=>t.classList.toggle("active",i===0));
   document.querySelectorAll(".det-tab-content").forEach((t,i)=>t.classList.toggle("active",i===0));
   document.getElementById("btn-del-cliente").style.display="";document.getElementById("btn-edit-cliente").style.display="";
@@ -894,6 +897,7 @@ function switchTab(nome,el){
   if(el)el.classList.add("active");
   document.getElementById("tab-"+nome).classList.add("active");
   if(nome==="rinnovo"&&_clienteCorrenteObj) loadTabRinnovo(_clienteCorrenteObj);
+  if(nome==="schede"&&_clienteCorrenteObj) loadTabSchede(_clienteCorrenteObj);
 }
 
 function apriModificaCliente(c){
@@ -957,6 +961,87 @@ async function loadTabRinnovo(c){
       </div>
       <button class="btn btn-primary" onclick="eseguiRinnovo('${c.id}')">✓ Rinnova abbonamento</button>
     </div>`;
+}
+
+async function loadTabSchede(c){
+  const tab=document.getElementById("tab-schede");
+  tab.innerHTML='<div class="spin"></div>';
+  const schede=await jsonp(BACKEND_URL+"?action=adminSchede&pw="+encodeURIComponent(PW)+"&idCliente="+c.id);
+
+  let html=`<div style="margin-bottom:16px">
+    <div style="font-family:var(--serif);font-size:16px;margin-bottom:12px">Carica nuova scheda</div>
+    <div class="form-grid" style="margin-bottom:12px">
+      <div class="form-group">
+        <label class="form-label">Nome scheda</label>
+        <input class="form-input" type="text" id="scheda-nome" placeholder="Es. Fase 1 - Forza"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">File PDF</label>
+        <input class="form-input" type="file" id="scheda-file" accept=".pdf" style="padding:8px"/>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="uploadScheda('${c.id}')">⬆ Carica PDF</button>
+    <div id="upload-status" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
+  </div>`;
+
+  if(Array.isArray(schede)&&schede.length){
+    html+=`<div style="font-family:var(--serif);font-size:16px;margin-bottom:10px">Schede caricate</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${schede.map(s=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surf2);border:1px solid var(--border);border-radius:8px;gap:12px">
+        <div>
+          <div style="font-size:14px;color:var(--text)">${s.nome}</div>
+          <div style="font-size:11px;color:var(--muted)">${s.data}</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <a href="${s.viewUrl}" target="_blank" class="btn btn-secondary btn-sm">Apri</a>
+          <button class="btn btn-danger btn-sm" onclick="eliminaScheda('${s.id}','${c.id}')">Elimina</button>
+        </div>
+      </div>`).join("")}
+    </div>`;
+  } else {
+    html+=`<div class="empty-state" style="padding:20px">Nessuna scheda caricata</div>`;
+  }
+
+  tab.innerHTML=html;
+}
+
+async function uploadScheda(idCliente){
+  const nome=document.getElementById("scheda-nome").value.trim();
+  const fileInput=document.getElementById("scheda-file");
+  const status=document.getElementById("upload-status");
+
+  if(!nome){toast("Inserisci un nome per la scheda","err");return;}
+  if(!fileInput.files.length){toast("Seleziona un file PDF","err");return;}
+
+  const file=fileInput.files[0];
+  if(file.size>10*1024*1024){toast("Il file è troppo grande (max 10MB)","err");return;}
+
+  status.textContent="Caricamento in corso...";
+
+  const reader=new FileReader();
+  reader.onload=async(e)=>{
+    const base64=e.target.result.split(",")[1];
+    const res=await post({
+      action:"adminUploadScheda",
+      idCliente, nome:nome+".pdf",
+      base64, mimeType:"application/pdf"
+    });
+    if(res.error){toast(res.error,"err");status.textContent="";return;}
+    toast("Scheda caricata!","ok");
+    status.textContent="";
+    document.getElementById("scheda-nome").value="";
+    fileInput.value="";
+    if(_clienteCorrenteObj) loadTabSchede(_clienteCorrenteObj);
+  };
+  reader.readAsDataURL(file);
+}
+
+async function eliminaScheda(idFile, idCliente){
+  if(!confirm("Eliminare questa scheda?"))return;
+  const res=await post({action:"adminDelScheda",id:idFile});
+  if(res.error){toast(res.error,"err");return;}
+  toast("Scheda eliminata","ok");
+  if(_clienteCorrenteObj) loadTabSchede(_clienteCorrenteObj);
 }
 
 async function eseguiRinnovo(idCliente){
