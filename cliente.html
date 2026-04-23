@@ -249,7 +249,7 @@
 <div id="toast"></div>
 
 <script>
-const BACKEND_URL = "https://script.google.com/macros/s/AKfycbymfYgoIcbYVh-DVxuakxS4oUl-ToYSkLUZl4aOte4ox23rw48WJ3AAEnqVa1y-f5rQaQ/exec";
+const BACKEND_URL = "https://script.google.com/macros/s/AKfycbwQ-BXp6ibqJiwidMvsGZCftKjkvyHsTRhhoVcKcqQBTd9koEjM0dfMozoHgri1FAgi/exec";
 const TOKEN = new URLSearchParams(window.location.search).get("t") || "";
 
 let cliente=null, slotsData=[], prenotazioni=[], listaAttesa=[];
@@ -302,7 +302,7 @@ function renderClientePill(){
   document.getElementById("av-sm").textContent=ini;
   document.getElementById("cliente-nome").textContent=cliente.nome+" "+cliente.cognome;
   const lezEl=document.getElementById("cliente-lezioni");
-  lezEl.textContent=`${cliente.lezioniRim} lezioni · scade ${fmtData(cliente.dataScad)}`;
+  lezEl.textContent=`${cliente.pacchetto} · ${cliente.lezioniRim} lezioni · scade ${fmtData(cliente.dataScad)}`;
   lezEl.className="cliente-lezioni"+(warn||gg<=7?" warn":"");
 }
 
