@@ -408,7 +408,7 @@
 <div id="toast"></div>
 
 <script>
-const BACKEND_URL = "https://script.google.com/macros/s/AKfycbymfYgoIcbYVh-DVxuakxS4oUl-ToYSkLUZl4aOte4ox23rw48WJ3AAEnqVa1y-f5rQaQ/exec";
+const BACKEND_URL = "https://script.google.com/macros/s/AKfycbwQ-BXp6ibqJiwidMvsGZCftKjkvyHsTRhhoVcKcqQBTd9koEjM0dfMozoHgri1FAgi/exec";
 const GITHUB_BASE = "https://OmicronPT.github.io/Omicron-Studio/cliente.html?t=";
 
 let PW="", pacchetti=[], calAnno=new Date().getFullYear(), calMeseN=new Date().getMonth();
@@ -822,7 +822,7 @@ function apriAddCliente(){
   ["c-nome","c-cognome","c-tel","c-email","c-indirizzo","c-instagram","c-facebook","c-anamnesi"].forEach(id=>document.getElementById(id).value="");
   document.getElementById("c-nascita").value="";document.getElementById("c-sesso").value="";
   const sel=document.getElementById("c-pkg");
-  sel.innerHTML=pacchetti.map(p=>`<option value="${p.id}">${p.nome} — €${p.prezzo}</option>`).join("");
+  sel.innerHTML=pacchetti.map(p=>`<option value="${p.id}">${p.nome} — €${p.prezzo}${p.descrizione?" · "+p.descrizione:""}</option>`).join("");
   apriModal("ov-cliente");
 }
 
@@ -906,7 +906,7 @@ function apriModificaCliente(c){
   document.getElementById("c-indirizzo").value=c.indirizzo||"";document.getElementById("c-instagram").value=c.instagram||"";
   document.getElementById("c-facebook").value=c.facebook||"";document.getElementById("c-anamnesi").value=c.noteAnamnesi||"";
   const sel=document.getElementById("c-pkg");
-  sel.innerHTML=pacchetti.map(p=>`<option value="${p.id}" ${p.nome===c.pacchetto?"selected":""}>${p.nome} — €${p.prezzo}</option>`).join("");
+  sel.innerHTML=pacchetti.map(p=>`<option value="${p.id}" ${p.nome===c.pacchetto?"selected":""}>${p.nome} — €${p.prezzo}${p.descrizione?" · "+p.descrizione:""}</option>`).join("");
   apriModal("ov-cliente");
 }
 
@@ -924,7 +924,7 @@ async function loadTabRinnovo(c){
   tab.innerHTML='<div class="spin"></div>';
   const canc=await jsonp(BACKEND_URL+"?action=adminStoricoCanc&pw="+encodeURIComponent(PW)+"&idCliente="+c.id);
   const gg=Math.ceil((new Date(c.dataScad)-new Date())/864e5);
-  const pkgOpts=pacchetti.map(p=>`<option value="${p.id}" ${p.nome===c.pacchetto?"selected":""}>${p.nome} — €${p.prezzo} (${p.lezioni} lezioni)</option>`).join("");
+  const pkgOpts=pacchetti.map(p=>`<option value="${p.id}" ${p.nome===c.pacchetto?"selected":""}>${p.nome} — €${p.prezzo}${p.descrizione?" · "+p.descrizione:""}</option>`).join("");
   tab.innerHTML=`
     <div style="margin-bottom:20px">
       <div style="font-family:var(--serif);font-size:16px;margin-bottom:10px">Stato abbonamento</div>
