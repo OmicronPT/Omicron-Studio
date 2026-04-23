@@ -249,7 +249,7 @@
 <div id="toast"></div>
 
 <script>
-const BACKEND_URL = "https://script.google.com/macros/s/AKfycbxQUYsOIOZei8WemX1pdmQAm9mdsfWt2P8Cjdhrtxtqlu22I5ACWAiNPVFecVGkq8uwPg/exec";
+const BACKEND_URL = "https://script.google.com/macros/s/AKfycbx0qLRUBp8p2VQ5mfJ6QNtP464aAfpHPDeH6_yTfIA4KhvGaZ95JFihl7adXncMi2lHCg/exec";
 const TOKEN = new URLSearchParams(window.location.search).get("t") || "";
 
 let cliente=null, slotsData=[], prenotazioni=[], listaAttesa=[];
@@ -460,8 +460,8 @@ function selezionaGiorno(dateStr){
         const prenotato=s.prenotato||preSet.has(dateStr+"_"+s.ora);
         const inAttesaSet=new Set(listaAttesa.map(a=>a.data+"_"+a.oraInizio));
         const inAttesa=inAttesaSet.has(dateStr+"_"+s.ora);
-        const pieno=s.postiLiberi===0&&!prenotato;
-        const scarsi=s.postiLiberi===1;
+        const pieno=s.pieno&&!prenotato;
+        const scarsi=s.postiLiberi===1&&!pieno;
 
         if(pieno&&!prenotato){
           // Slot pieno - mostra pulsante lista attesa
