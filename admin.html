@@ -1031,7 +1031,7 @@ async function uploadScheda(idCliente){
     status.textContent="";
     document.getElementById("scheda-nome").value="";
     fileInput.value="";
-    if(_clienteCorrenteObj) loadTabSchede(_clienteCorrenteObj);
+    setTimeout(()=>{ if(_clienteCorrenteObj) loadTabSchede(_clienteCorrenteObj); }, 1500);setTimeout(()=>{ if(_clienteCorrenteObj) loadTabSchede(_clienteCorrenteObj); }, 1500);
   };
   reader.readAsDataURL(file);
 }
