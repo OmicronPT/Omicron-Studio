@@ -130,6 +130,7 @@
     .slot-item.occupato{border-color:rgba(232,80,10,.3);background:rgba(232,80,10,.04)}
     .slot-item.pieno{border-color:rgba(220,38,38,.3);background:rgba(220,38,38,.04)}
     .slot-item.bloccato{border-color:rgba(107,107,107,.25);background:rgba(107,107,107,.06);opacity:.7}
+    #pkg-custom-fields{display:none;grid-column:1/-1}
     .slot-item.cliccabile{cursor:pointer;transition:all .18s}
     .slot-item.cliccabile:hover{border-color:var(--accent);background:rgba(232,80,10,.04)}
     .slot-item.bloccato.cliccabile:hover{border-color:#dc2626;background:rgba(220,38,38,.08)}
@@ -334,7 +335,28 @@
       <div class="form-group"><label class="form-label">Instagram</label><input class="form-input" type="text" id="c-instagram" placeholder="@username"/></div>
       <div class="form-group"><label class="form-label">Facebook</label><input class="form-input" type="text" id="c-facebook"/></div>
       <div class="form-section-title">Pacchetto</div>
-      <div class="form-group" style="grid-column:1/-1"><label class="form-label">Pacchetto *</label><select class="form-select" id="c-pkg"></select></div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label class="form-label">Pacchetto *</label>
+        <select class="form-select" id="c-pkg" onchange="togglePkgCustom()"></select>
+      </div>
+      <div id="pkg-custom-fields" class="form-grid" style="grid-column:1/-1;padding:14px;background:var(--surf2);border-radius:8px;border:1px solid var(--border)">
+        <div class="form-group">
+          <label class="form-label">Nome pacchetto</label>
+          <input class="form-input" type="text" id="c-pkg-nome" placeholder="Es. Pacchetto Recupero"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Numero lezioni</label>
+          <input class="form-input" type="number" id="c-pkg-lezioni" value="10" min="1" max="100"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Validità (giorni)</label>
+          <input class="form-input" type="number" id="c-pkg-durata" value="60" min="1" max="365"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Limite settimanale (0 = nessun limite)</label>
+          <input class="form-input" type="number" id="c-pkg-settimana" value="0" min="0" max="7"/>
+        </div>
+      </div>
       <div class="form-section-title">Note anamnesi</div>
       <div class="form-group" style="grid-column:1/-1"><label class="form-label">Note cliniche</label><textarea class="form-textarea" id="c-anamnesi" placeholder="Patologie, limitazioni, obiettivi..."></textarea></div>
     </div>
@@ -410,7 +432,7 @@
 <div id="toast"></div>
 
 <script>
-const BACKEND_URL = "https://script.google.com/macros/s/AKfycbwUx77GBgsuv5C30RBw4Ta4hGSua6kEANseLPkDO-rs7Lp7K2yjE1sGfR6iLTS7WACJ/exec";
+const BACKEND_URL = "https://script.google.com/macros/s/AKfycbxYQWT3GvpmMYHc8cuA8A7HmAMpR3W9o-ndCuMyxPdHOuJ7OPrnQAv-4YianD0C3yOjCQ/exec";
 const GITHUB_BASE = "https://OmicronPT.github.io/Omicron-Studio/cliente.html?t=";
 
 let PW="", pacchetti=[], calAnno=new Date().getFullYear(), calMeseN=new Date().getMonth();
@@ -823,8 +845,13 @@ function apriAddCliente(){
   document.getElementById("btn-salva-cliente").textContent="Salva";
   ["c-nome","c-cognome","c-tel","c-email","c-indirizzo","c-instagram","c-facebook","c-anamnesi"].forEach(id=>document.getElementById(id).value="");
   document.getElementById("c-nascita").value="";document.getElementById("c-sesso").value="";
+  document.getElementById("pkg-custom-fields").style.display="none";
+  document.getElementById("c-pkg-nome").value="";
+  document.getElementById("c-pkg-lezioni").value="10";
+  document.getElementById("c-pkg-durata").value="60";
+  document.getElementById("c-pkg-settimana").value="0";
   const sel=document.getElementById("c-pkg");
-  sel.innerHTML=pacchetti.map(p=>`<option value="${p.id}">${p.nome} — €${p.prezzo}${p.descrizione?" · "+p.descrizione:""}</option>`).join("");
+  sel.innerHTML=pacchetti.map(p=>`<option value="${p.id}">${p.nome} — €${p.prezzo}${p.descrizione?" · "+p.descrizione:""}</option>`).join("")+'<option value="CUSTOM">✏️ Personalizzato</option>';
   apriModal("ov-cliente");
 }
 
@@ -910,7 +937,7 @@ function apriModificaCliente(c){
   document.getElementById("c-indirizzo").value=c.indirizzo||"";document.getElementById("c-instagram").value=c.instagram||"";
   document.getElementById("c-facebook").value=c.facebook||"";document.getElementById("c-anamnesi").value=c.noteAnamnesi||"";
   const sel=document.getElementById("c-pkg");
-  sel.innerHTML=pacchetti.map(p=>`<option value="${p.id}" ${p.nome===c.pacchetto?"selected":""}>${p.nome} — €${p.prezzo}${p.descrizione?" · "+p.descrizione:""}</option>`).join("");
+  sel.innerHTML=pacchetti.map(p=>`<option value="${p.id}" ${p.nome===c.pacchetto?"selected":""}>${p.nome} — €${p.prezzo}${p.descrizione?" · "+p.descrizione:""}</option>`).join("")+'<option value="CUSTOM">✏️ Personalizzato</option>';
   apriModal("ov-cliente");
 }
 
@@ -1031,7 +1058,7 @@ async function uploadScheda(idCliente){
     status.textContent="";
     document.getElementById("scheda-nome").value="";
     fileInput.value="";
-    setTimeout(()=>{ if(_clienteCorrenteObj) loadTabSchede(_clienteCorrenteObj); }, 1500);setTimeout(()=>{ if(_clienteCorrenteObj) loadTabSchede(_clienteCorrenteObj); }, 1500);
+    if(_clienteCorrenteObj) loadTabSchede(_clienteCorrenteObj);
   };
   reader.readAsDataURL(file);
 }
@@ -1061,6 +1088,11 @@ async function eliminaCliente(id){
 }
 
 // ── UTILS ─────────────────────────────────────────────────
+function togglePkgCustom(){
+  const val=document.getElementById("c-pkg").value;
+  document.getElementById("pkg-custom-fields").style.display=val==="CUSTOM"?"grid":"none";
+}
+
 function toggleRipetizione(){
   const tipo=document.getElementById("rip-tipo").value;
   document.getElementById("rip-settimane-group").style.display=tipo==="weeks"?"flex":"none";
