@@ -97,6 +97,10 @@
     .cal-slot-bar{height:4px;border-radius:2px;margin-bottom:2px;background:var(--accent);opacity:.7}
     .cal-slot-bar.full{background:#e74c3c;opacity:.8}
     .cal-slot-bar.bloccato{background:var(--muted);opacity:.5}
+    .cal-slot-entry{font-size:10px;padding:1px 4px;border-radius:3px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+    .cal-slot-entry.avail{background:rgba(39,174,96,.12);color:#18a34a}
+    .cal-slot-entry.full{background:rgba(220,38,38,.12);color:#dc2626}
+    .cal-slot-entry.blk{background:rgba(107,107,107,.12);color:var(--muted)}
     .cal-blocco-label{font-size:10px;color:#e74c3c;margin-top:2px}
 
     /* FORM */
@@ -545,13 +549,27 @@ function renderCal(){
     let extra="",cls="";
     if(isWeekend){cls="weekend";}
     else if(info){
-      if(info.bloccatoTutto){cls="bloccato";extra=`<div class="cal-blocco-label">🔒 bloccato</div>`;}
+      if(info.bloccatoTutto){cls="bloccato";}
       else{
-        extra=`<div class="cal-pre-count">${info.nPrenotazioni} prenotazioni</div>`;
-        if(info.slots.length>0){
-          const maxBars=5;
-          const shown=info.slots.slice(0,maxBars);
-          extra+=shown.map(s=>`<div class="cal-slot-bar ${s.bloccato?'bloccato':s.count>=3?'full':''}" title="${s.ora}: ${s.count}/3"></div>`).join("");
+        // Mostra prenotazioni con nome cliente e orario
+        const maxShow=4;
+        let entries="";
+        // Raccoglie tutti gli slot con prenotazioni o blocchi
+        const slotsConDati=info.slots.filter(s=>s.count>0||s.bloccato);
+        if(slotsConDati.length>0){
+          const shown=slotsConDati.slice(0,maxShow);
+          entries=shown.map(s=>{
+            if(s.bloccato) return `<span class="cal-slot-entry blk">🔒 ${s.ora}</span>`;
+            const nomi=s.clienti&&s.clienti.length?s.clienti.map(n=>n.split(" ")[0]).join(", "):"";
+            const cls=s.count>=3?"full":"avail";
+            return `<span class="cal-slot-entry ${cls}">${s.ora}${nomi?" · "+nomi:""}</span>`;
+          }).join("");
+          if(slotsConDati.length>maxShow) entries+=`<span style="font-size:9px;color:var(--muted)">+${slotsConDati.length-maxShow} altri</span>`;
+        }
+        if(info.bloccatoTutto){
+          extra=`<div class="cal-blocco-label">🔒 bloccato</div>`;
+        } else {
+          extra=entries;
         }
       }
     }
