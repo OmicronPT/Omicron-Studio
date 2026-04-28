@@ -160,6 +160,12 @@
     @keyframes sp{to{transform:rotate(360deg)}}
     .empty{text-align:center;padding:32px;color:var(--muted)}
 
+    /* Rinnovo */
+    .rinnovo-panel{background:linear-gradient(135deg,rgba(232,80,10,.08),rgba(232,80,10,.03));border:1px solid rgba(232,80,10,.3);border-radius:var(--r);padding:18px 20px;margin-top:16px;display:none}
+    .rinnovo-panel.visible{display:block}
+    .rinnovo-title{font-family:var(--serif);font-size:17px;color:var(--accent2);margin-bottom:6px}
+    .rinnovo-sub{font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5}
+
     /* Log attività */
     .log-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px 24px;margin-top:20px}
     .log-section-title{font-family:var(--serif);font-size:19px;font-weight:300;margin-bottom:16px}
@@ -175,6 +181,8 @@
     .scheda-item{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;margin-bottom:8px;gap:12px}
     .scheda-nome{font-size:14px;color:var(--text);font-weight:400}
     .scheda-data{font-size:11px;color:var(--muted);margin-top:2px}
+    .form-input{padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:14px;outline:none;transition:border-color .2s;width:100%}
+    .form-input:focus{border-color:var(--accent)}
     .btn-scheda{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:8px;font-family:var(--mono);font-size:12px;background:var(--accent);color:#fff;border:none;cursor:pointer;text-decoration:none;transition:background .18s}
     .btn-scheda:hover{background:var(--accent2)}
 
@@ -223,6 +231,14 @@
 <div class="wrap">
 
   <!-- Prenotazioni attive -->
+  <!-- Pannello rinnovo -->
+  <div class="rinnovo-panel" id="rinnovo-panel">
+    <div class="rinnovo-title">🔄 Rinnova il tuo pacchetto</div>
+    <div class="rinnovo-sub" id="rinnovo-sub"></div>
+    <select class="form-input" id="rinnovo-pkg-sel" style="margin-bottom:12px;width:100%;font-size:14px"></select>
+    <button class="btn btn-p" onclick="apriModalRinnovo()" style="width:100%">Richiedi rinnovo</button>
+  </div>
+
   <!-- Lista attesa attiva -->
   <div id="sec-attesa" style="display:none">
     <div class="section-title" style="color:#b45309">⏳ In lista d'attesa</div>
@@ -281,6 +297,18 @@
 </div>
 
 <!-- MODAL CANCELLA -->
+<!-- MODAL CONFERMA RINNOVO -->
+<div class="ov" id="ov-rinnovo">
+  <div class="modal">
+    <h3>Richiedi rinnovo</h3>
+    <p id="modal-rinnovo-txt">Vuoi richiedere il rinnovo del pacchetto? Verrai contattato per completare il pagamento.</p>
+    <div class="ma">
+      <button class="btn btn-sm" style="border:1px solid var(--border)" onclick="chiudiModal('ov-rinnovo')">Annulla</button>
+      <button class="btn btn-p btn-sm" onclick="inviaRinnovo()">Invia richiesta</button>
+    </div>
+  </div>
+</div>
+
 <div class="ov" id="ov-canc">
   <div class="modal">
     <h3>Cancella prenotazione</h3>
@@ -295,10 +323,10 @@
 <div id="toast"></div>
 
 <script>
-const BACKEND_URL = "https://script.google.com/macros/s/AKfycby20q-l5Ro_y9SeeRa-5b5MT_uHF3hXp2yHmwhHkx17CemjGEDqaqYggjUrnb1HChdx8A/exec";
+const BACKEND_URL = "https://script.google.com/macros/s/AKfycbyG-hKz8izfcaSoSHcglAX3WpLREbwpZM5-OT52iPn_QQFYG3m4puDcfneCDXYopR_mpw/exec";
 const TOKEN = new URLSearchParams(window.location.search).get("t") || "";
 
-let cliente=null, slotsData=[], prenotazioni=[], listaAttesa=[], schedeList=[], logList=[];
+let cliente=null, slotsData=[], prenotazioni=[], listaAttesa=[], schedeList=[], logList=[], pkgList=[];
 let calAnno=new Date().getFullYear(), calMeseN=new Date().getMonth();
 let giornoSelezionato=null;
 
@@ -326,10 +354,11 @@ async function init(){
   if(!TOKEN){showError("🔒","Link non valido. Contatta lo studio.");return;}
   if(BACKEND_URL==="INSERISCI_QUI_URL_APPS_SCRIPT"){showError("⚙️","Backend non configurato.");return;}
   try{
-    const [c,s,p,a,sc,lg]=await Promise.all([get("getCliente"),get("getSlotDisponibili"),get("getPrenotazioni"),get("getListaAttesa"),get("getSchedeCliente"),get("getLogCliente")]);
+    const [c,s,p,a,sc,lg,pk]=await Promise.all([get("getCliente"),get("getSlotDisponibili"),get("getPrenotazioni"),get("getListaAttesa"),get("getSchedeCliente"),get("getLogCliente"),get("adminPacchetti")]);
     if(c.error)throw new Error(c.error);
-    cliente=c; slotsData=Array.isArray(s)?s:[]; prenotazioni=Array.isArray(p)?p:[]; listaAttesa=Array.isArray(a)?a:[]; schedeList=Array.isArray(sc)?sc:[]; logList=Array.isArray(lg)?lg:[];
+    cliente=c; slotsData=Array.isArray(s)?s:[]; prenotazioni=Array.isArray(p)?p:[]; listaAttesa=Array.isArray(a)?a:[]; schedeList=Array.isArray(sc)?sc:[]; logList=Array.isArray(lg)?lg:[]; pkgList=Array.isArray(pk)?pk:[];
     renderClientePill();
+    renderRinnovo();
     renderListaAttesa();
     renderPrenotazioni();
     renderCal();
@@ -612,6 +641,44 @@ async function cancella(id){
   slotsData=Array.isArray(s)?s:[]; prenotazioni=Array.isArray(p)?p:[];
   renderClientePill(); renderPrenotazioni(); renderCal();
   if(giornoSelezionato) selezionaGiorno(giornoSelezionato);
+}
+
+// ── RINNOVO ────────────────────────────────────────────────
+function renderRinnovo(){
+  const panel=document.getElementById("rinnovo-panel");
+  const sub=document.getElementById("rinnovo-sub");
+  const sel=document.getElementById("rinnovo-pkg-sel");
+
+  const scad=new Date(cliente.dataScad),gg=Math.ceil((scad-new Date())/864e5);
+  const mostra=gg<=7||cliente.lezioniRim<=2;
+
+  if(!mostra){panel.classList.remove("visible");return;}
+  panel.classList.add("visible");
+
+  if(gg<=0) sub.textContent="Il tuo pacchetto è scaduto. Richiedi il rinnovo per continuare a prenotare.";
+  else if(cliente.lezioniRim<=0) sub.textContent="Hai esaurito le lezioni del tuo pacchetto. Richiedi il rinnovo per continuare.";
+  else sub.textContent=`Il tuo pacchetto scade tra ${gg} giorni e hai ${cliente.lezioniRim} lezioni rimanenti. Vuoi rinnovare?`;
+
+  // Popola select con i pacchetti disponibili
+  sel.innerHTML=`<option value="">— Stesso pacchetto (${cliente.pacchetto}) —</option>`+
+    pkgList.map(p=>`<option value="${p.id}">${p.nome} — €${p.prezzo}${p.descrizione?" · "+p.descrizione:""}</option>`).join("");
+}
+
+function apriModalRinnovo(){
+  const sel=document.getElementById("rinnovo-pkg-sel");
+  const pkgNome=sel.value?sel.options[sel.selectedIndex].text:`stesso pacchetto (${cliente.pacchetto})`;
+  document.getElementById("modal-rinnovo-txt").textContent=`Richiedi rinnovo con: ${pkgNome}. Verrai contattato per completare il pagamento.`;
+  apriModal("ov-rinnovo");
+}
+
+async function inviaRinnovo(){
+  chiudiModal("ov-rinnovo");
+  const idPacchetto=document.getElementById("rinnovo-pkg-sel").value||"";
+  const res=await post({action:"richiestaRinnovo",idPacchetto});
+  if(res.error){toast(res.error,"err");return;}
+  toast("Richiesta inviata! Ti contatteremo presto 💪","ok");
+  // Nascondi il pannello dopo la richiesta
+  document.getElementById("rinnovo-panel").classList.remove("visible");
 }
 
 // ── LOG ────────────────────────────────────────────────────
