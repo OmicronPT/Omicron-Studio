@@ -141,10 +141,12 @@
     .btn-sm{padding:5px 12px;font-size:12px}
 
     /* ── TOAST ── */
-    #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(14px);background:var(--text);border-radius:10px;padding:12px 22px;font-size:14px;color:var(--surface);opacity:0;transition:all .3s;pointer-events:none;z-index:999;max-width:320px;text-align:center}
+    #toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--text);border-radius:12px;padding:14px 24px;font-size:14px;color:var(--surface);opacity:0;transition:all .35s cubic-bezier(.34,1.56,.64,1);pointer-events:none;z-index:999;max-width:360px;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.2)}
     #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
     #toast.ok{background:#18a34a}
     #toast.err{background:#dc2626}
+    .slot.just-booked{animation:slotBooked .6s ease both}
+    @keyframes slotBooked{0%{transform:scale(1)}50%{transform:scale(1.05);border-color:var(--accent)}100%{transform:scale(1)}}
 
     /* ── MODAL ── */
     .ov{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:100;opacity:0;pointer-events:none;transition:opacity .2s}
@@ -160,11 +162,30 @@
     @keyframes sp{to{transform:rotate(360deg)}}
     .empty{text-align:center;padding:32px;color:var(--muted)}
 
+    /* Banner benvenuto */
+    .welcome-bar{background:linear-gradient(135deg,var(--accent2),var(--accent));color:#fff;padding:0}
+    .welcome-inner{max-width:680px;margin:0 auto;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .welcome-text{font-size:13px;line-height:1.5}
+    .welcome-name{font-family:var(--serif);font-size:16px;font-weight:400;display:block;margin-bottom:1px}
+    .welcome-sub{font-size:11px;opacity:.85}
+
     /* Rinnovo */
     .rinnovo-panel{background:linear-gradient(135deg,rgba(232,80,10,.08),rgba(232,80,10,.03));border:1px solid rgba(232,80,10,.3);border-radius:var(--r);padding:18px 20px;margin-top:16px;display:none}
     .rinnovo-panel.visible{display:block}
     .rinnovo-title{font-family:var(--serif);font-size:17px;color:var(--accent2);margin-bottom:6px}
     .rinnovo-sub{font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5}
+
+    /* Nav tabs */
+    .nav-tabs{background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:var(--topbar-h,0);z-index:40}
+    .nav-tabs-inner{max-width:680px;margin:0 auto;display:flex;overflow-x:auto;scrollbar-width:none}
+    .nav-tabs-inner::-webkit-scrollbar{display:none}
+    .nav-tab{padding:12px 16px;font-family:var(--mono);font-size:12px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .15s;flex-shrink:0}
+    .nav-tab:hover{color:var(--text)}
+    .nav-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+    /* Sezioni */
+    .content-section{display:none}
+    .content-section.active{display:block}
 
     /* Log attività */
     .log-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px 24px;margin-top:20px}
@@ -205,6 +226,16 @@
 <body>
 
 <!-- ── HEADER FISSO ── -->
+<div class="welcome-bar">
+  <div class="welcome-inner">
+    <div class="welcome-text">
+      <span class="welcome-name" id="welcome-name">Benvenuto!</span>
+      <span class="welcome-sub">Prenota le tue sessioni, gestisci le prenotazioni e consulta le tue schede di allenamento</span>
+    </div>
+    <div style="font-size:24px;opacity:.7">💪</div>
+  </div>
+</div>
+
 <div class="top-bar">
   <div class="top-bar-inner">
     <div class="logo-row">
@@ -227,11 +258,21 @@
   </div>
 </div>
 
+<!-- ── NAV TABS ── -->
+<div class="nav-tabs">
+  <div class="nav-tabs-inner">
+    <div class="nav-tab active" onclick="showSection('prenota',this)">📅 Prenota</div>
+    <div class="nav-tab" onclick="showSection('prenotazioni',this)">✓ Le mie prenotazioni</div>
+    <div class="nav-tab" onclick="showSection('schede',this)">📋 Schede</div>
+    <div class="nav-tab" onclick="showSection('storico',this)">📊 Storico</div>
+  </div>
+</div>
+
 <!-- ── CONTENT ── -->
 <div class="wrap">
 
   <!-- Prenotazioni attive -->
-  <!-- Pannello rinnovo -->
+  <!-- Pannello rinnovo (mostrato nella sezione prenotazioni) -->
   <div class="rinnovo-panel" id="rinnovo-panel">
     <div class="rinnovo-title">🔄 Rinnova il tuo pacchetto</div>
     <div class="rinnovo-sub" id="rinnovo-sub"></div>
@@ -252,6 +293,9 @@
     <div class="divider"></div>
   </div>
 
+  <!-- SEZIONE PRENOTA -->
+  <div class="content-section active" id="section-prenota">
+
   <!-- Calendario -->
   <div class="cal-header">
     <div class="cal-title" id="cal-title"></div>
@@ -266,21 +310,32 @@
   <!-- Slot del giorno selezionato -->
   <div id="slot-panel" style="display:none"></div>
 
-  <!-- Schede di allenamento -->
-  <div id="sec-schede" style="display:none">
+  </div><!-- fine section-prenota -->
+
+  <!-- SEZIONE PRENOTAZIONI -->
+  <div class="content-section" id="section-prenotazioni">
+
+  </div><!-- fine section-prenotazioni -->
+
+  <!-- SEZIONE SCHEDE -->
+  <div class="content-section" id="section-schede">
+  <div id="sec-schede">
     <div class="schede-section">
       <div class="schede-title">📋 Le mie schede di allenamento</div>
       <div id="lista-schede"></div>
     </div>
   </div>
+  </div><!-- fine section-schede -->
 
-  <!-- Log attività -->
-  <div id="sec-log" style="display:none">
+  <!-- SEZIONE STORICO -->
+  <div class="content-section" id="section-storico">
+  <div id="sec-log">
     <div class="log-section">
       <div class="log-section-title">📊 Storico attività</div>
       <div id="lista-log"></div>
     </div>
   </div>
+  </div><!-- fine section-storico -->
 
 </div>
 
@@ -378,6 +433,7 @@ function renderClientePill(){
   const scad=new Date(cliente.dataScad), gg=Math.ceil((scad-new Date())/864e5);
   document.getElementById("av-sm").textContent=ini;
   document.getElementById("cliente-nome").textContent=cliente.nome+" "+cliente.cognome;
+  document.getElementById("welcome-name").textContent="Ciao " + cliente.nome + "! 👋";
 
   const warnLez=cliente.lezioniRim<=2;
   const warnScad=gg<=7;
@@ -588,7 +644,7 @@ async function prenota(data,ora){
   chiudiModal("ov");
   const res=await post({action:"prenota",data,oraInizio:ora});
   if(res.error){toast(res.error,"err");return;}
-  toast("Prenotazione confermata! 🎉","ok");
+  toast("Prenotazione confermata!","ok");
   cliente.lezioniRim=res.lezioniRimanenti;
   const[s,p,a]=await Promise.all([get("getSlotDisponibili"),get("getPrenotazioni"),get("getListaAttesa")]);
   slotsData=Array.isArray(s)?s:[]; prenotazioni=Array.isArray(p)?p:[]; listaAttesa=Array.isArray(a)?a:[];
@@ -685,8 +741,7 @@ async function inviaRinnovo(){
 function renderLog(){
   const sec=document.getElementById("sec-log");
   const lista=document.getElementById("lista-log");
-  if(!logList.length){sec.style.display="none";return;}
-  sec.style.display="block";
+  if(!logList.length){sec.innerHTML='<div class="empty" style="padding:40px;color:var(--muted)">Nessuna attività registrata</div>';return;}
   const iconMap={Prenotazione:"💪",Cancellazione:"❌",Rinnovo:"🔄"};
   lista.innerHTML=logList.map(l=>`<div class="log-entry">
     <div class="log-ei">${iconMap[l.tipo]||"📋"}</div>
@@ -701,8 +756,7 @@ function renderLog(){
 function renderSchede(){
   const sec=document.getElementById("sec-schede");
   const lista=document.getElementById("lista-schede");
-  if(!schedeList.length){sec.style.display="none";return;}
-  sec.style.display="block";
+  if(!schedeList.length){sec.innerHTML='<div class="empty" style="padding:40px;color:var(--muted)">Nessuna scheda caricata</div>';return;}
   lista.innerHTML=schedeList.map(s=>`<div class="scheda-item">
     <div>
       <div class="scheda-nome">${s.nome.replace(".pdf","")}</div>
@@ -712,11 +766,27 @@ function renderSchede(){
   </div>`).join("");
 }
 
+// ── NAVIGAZIONE ───────────────────────────────────────────
+function showSection(id, el){
+  document.querySelectorAll(".content-section").forEach(s=>s.classList.remove("active"));
+  document.querySelectorAll(".nav-tab").forEach(t=>t.classList.remove("active"));
+  document.getElementById("section-"+id).classList.add("active");
+  if(el) el.classList.add("active");
+  // Scroll in cima
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
 // ── UTILS ──────────────────────────────────────────────────
 function fmtData(str){return new Date(str).toLocaleDateString("it-IT",{day:"numeric",month:"short"});}
 function apriModal(id){document.getElementById(id).classList.add("open");}
 function chiudiModal(id){document.getElementById(id).classList.remove("open");}
-function toast(msg,tipo){const el=document.getElementById("toast");el.textContent=msg;el.className="show "+(tipo||"");setTimeout(()=>el.className="",3500);}
+function toast(msg,tipo){
+  const el=document.getElementById("toast");
+  const icon=tipo==="ok"?"✓ ":tipo==="err"?"✕ ":"";
+  el.textContent=icon+msg;
+  el.className="show "+(tipo||"");
+  setTimeout(()=>el.className="",4500);
+}
 document.querySelectorAll(".ov").forEach(ov=>ov.addEventListener("click",e=>{if(e.target===ov)ov.classList.remove("open");}));
 
 init();
