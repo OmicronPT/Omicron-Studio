@@ -156,6 +156,10 @@
     /* BLOCCHI */
     .blocchi-list{display:flex;flex-direction:column;gap:8px;margin-top:16px}
     .blocco-item{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(220,38,38,.05);border:1px solid rgba(220,38,38,.2);border-radius:8px;font-size:13px}
+    .agenda-item{display:flex;align-items:center;gap:12px;padding:8px 12px;background:rgba(232,80,10,.05);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;margin-bottom:6px}
+    .agenda-ora{font-family:var(--serif);font-size:17px;font-weight:300;color:var(--accent);min-width:48px}
+    .agenda-nomi{font-size:13px;color:var(--text)}
+    .agenda-posti{font-size:11px;color:var(--muted);margin-top:1px}
 
     /* MODAL */
     .overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:200;opacity:0;pointer-events:none;transition:opacity .2s}
@@ -751,6 +755,20 @@ function apriDettaglioGiorno(dateStr){
   blocchiGiorno.forEach(b=>{
     if(b.oraInizio&&b.oraFine) blocchiSlot[b.oraInizio]=b.id;
   });
+
+  // Riepilogo agenda del giorno
+  const appuntamenti=slotsInfo.filter(s=>s.count>0&&!s.bloccato).sort((a,b)=>a.ora.localeCompare(b.ora));
+  if(appuntamenti.length){
+    html+=`<div style="font-family:var(--serif);font-size:16px;margin-bottom:10px">📋 Agenda</div>`;
+    html+=appuntamenti.map(s=>`<div class="agenda-item">
+      <div class="agenda-ora">${s.ora}</div>
+      <div>
+        <div class="agenda-nomi">${s.clienti&&s.clienti.length?s.clienti.join(", "):"—"}</div>
+        <div class="agenda-posti">${s.count}/3 posti occupati</div>
+      </div>
+    </div>`).join("");
+    html+=`<div style="height:16px"></div>`;
+  }
 
   // Genera tutti gli slot del giorno usando funzione comune
   const tuttiSlot=_slotDelGiornoAdmin();
