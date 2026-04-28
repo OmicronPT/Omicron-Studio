@@ -29,8 +29,20 @@
     .av-sm{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent2),var(--accent));display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:13px;color:#fff;flex-shrink:0}
     .cliente-info{font-size:13px}
     .cliente-nome{color:var(--text);font-weight:400}
-    .cliente-lezioni{color:var(--muted);font-size:11px;margin-top:1px}
+    .cliente-lezioni{color:var(--muted);font-size:12px;margin-top:3px;line-height:1.5}
     .cliente-lezioni.warn{color:var(--accent2)}
+    .cliente-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;font-size:11px;margin-top:4px;margin-right:4px}
+    .badge-pkg{background:rgba(232,80,10,.1);color:var(--accent2);border:1px solid rgba(232,80,10,.2)}
+    .badge-lezioni{background:rgba(39,174,96,.1);color:#18a34a;border:1px solid rgba(39,174,96,.2)}
+    .badge-lezioni.warn{background:rgba(220,38,38,.1);color:#dc2626;border-color:rgba(220,38,38,.2)}
+    .badge-scad{background:rgba(107,107,107,.1);color:var(--muted);border:1px solid var(--border)}
+    .badge-scad.warn{background:rgba(220,38,38,.1);color:#dc2626;border-color:rgba(220,38,38,.2)}
+    .cliente-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;font-size:11px;margin-top:4px;margin-right:4px}
+    .badge-pkg{background:rgba(232,80,10,.1);color:var(--accent2);border:1px solid rgba(232,80,10,.2)}
+    .badge-lezioni{background:rgba(39,174,96,.1);color:#18a34a;border:1px solid rgba(39,174,96,.2)}
+    .badge-lezioni.warn{background:rgba(220,38,38,.1);color:#dc2626;border-color:rgba(220,38,38,.2)}
+    .badge-scad{background:rgba(107,107,107,.1);color:var(--muted);border:1px solid var(--border)}
+    .badge-scad.warn{background:rgba(220,38,38,.1);color:#dc2626;border-color:rgba(220,38,38,.2)}
 
     /* ── REGOLE COMPATTE ── */
     .regole-bar{
@@ -193,7 +205,7 @@
         <div class="av-sm" id="av-sm">…</div>
         <div class="cliente-info">
           <div class="cliente-nome" id="cliente-nome">Caricamento…</div>
-          <div class="cliente-lezioni" id="cliente-lezioni"></div>
+          <div id="cliente-badges"></div>
         </div>
       </div>
     </div>
@@ -337,9 +349,21 @@ function renderClientePill(){
   const scad=new Date(cliente.dataScad), gg=Math.ceil((scad-new Date())/864e5);
   document.getElementById("av-sm").textContent=ini;
   document.getElementById("cliente-nome").textContent=cliente.nome+" "+cliente.cognome;
-  const lezEl=document.getElementById("cliente-lezioni");
-  lezEl.textContent=`${cliente.pacchetto} · ${cliente.lezioniRim} lezioni · scade ${fmtData(cliente.dataScad)}`;
-  lezEl.className="cliente-lezioni"+(warn||gg<=7?" warn":"");
+
+  const warnLez=cliente.lezioniRim<=2;
+  const warnScad=gg<=7;
+  let scadLabel="";
+  if(gg<=0) scadLabel="⚠️ Pacchetto scaduto";
+  else if(gg===1) scadLabel="⚠️ Scade domani";
+  else if(gg<=7) scadLabel=`⚠️ Scade tra ${gg} giorni (${fmtData(cliente.dataScad)})`;
+  else scadLabel=`📅 Valido fino al ${fmtData(cliente.dataScad)} — ${gg} giorni rimanenti`;
+
+  document.getElementById("cliente-badges").innerHTML=`
+    <span class="cliente-badge badge-pkg">📦 ${cliente.pacchetto}</span>
+    <span class="cliente-badge badge-lezioni ${warnLez?'warn':''}">💪 ${cliente.lezioniRim} lezioni rimanenti</span>
+    <br>
+    <span class="cliente-badge badge-scad ${warnScad?'warn':''}">${scadLabel}</span>
+  `;
 }
 
 // ── LISTA ATTESA ───────────────────────────────────────────
