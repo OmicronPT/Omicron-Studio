@@ -1695,7 +1695,8 @@ async function salvaLimite() {
   }
 
   const res = await post(body);
-  if (res.success) {
+console.log("Risposta backend:", JSON.stringify(res));
+if (res.success) {
     toggleFormLimite();
     resetFormLimite();
     caricaLimiti();
