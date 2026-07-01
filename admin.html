@@ -213,131 +213,134 @@
  
 <!-- STILI da aggiungere nel <style> esistente di admin.html -->
 <style>
-/* ---------- LIMITI CAPIENZA ---------- */
+/* ============================================================
+   LIMITI CAPIENZA — CSS riscritto per tema admin Omicron
+   Sostituisce completamente il blocco <style> precedente
+   ============================================================ */
+
+/* Sezione wrapper */
 .limiti-section {
-  margin-top: 32px;
+  margin-top: 8px;
 }
- 
+
 .limiti-section .section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
- 
-.limiti-section .section-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: #e2e8f0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
- 
-.limiti-section .section-title span.badge-count {
-  background: #334155;
-  color: #94a3b8;
+
+/* Badge contatore */
+.badge-count {
+  font-family: var(--mono);
   font-size: 11px;
   font-weight: 500;
+  color: var(--muted);
+  background: var(--surf2);
+  border: 1px solid var(--border);
   padding: 2px 8px;
   border-radius: 20px;
+  margin-left: 8px;
+  vertical-align: middle;
 }
- 
+
+/* Bottone aggiungi */
+.btn-aggiungi-limite {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid rgba(232,80,10,.35);
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: .08em;
+  cursor: pointer;
+  transition: all .18s;
+}
+.btn-aggiungi-limite:hover {
+  background: rgba(232,80,10,.06);
+  border-color: var(--accent);
+}
+
 /* Form aggiunta limite */
 .limite-form {
-  background: #1e293b;
-  border: 1px solid #334155;
-  border-radius: 12px;
-  padding: 20px;
-  margin-bottom: 20px;
+  background: var(--surf);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 18px 20px;
+  margin-bottom: 16px;
   display: none;
 }
- 
 .limite-form.visible {
   display: block;
-  animation: fadeSlideIn 0.2s ease;
 }
- 
-@keyframes fadeSlideIn {
-  from { opacity: 0; transform: translateY(-8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
- 
+
 .limite-form-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #94a3b8;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin-bottom: 16px;
+  font-family: var(--serif);
+  font-size: 16px;
+  font-weight: 300;
+  color: var(--text);
+  margin-bottom: 14px;
 }
- 
+
 .limite-form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
- 
 .limite-form-grid.full {
   grid-template-columns: 1fr;
 }
- 
-.form-group label {
+
+.limite-form .form-group label {
   display: block;
-  font-size: 12px;
-  color: #64748b;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .08em;
+  color: var(--muted);
   margin-bottom: 5px;
-  font-weight: 500;
 }
- 
-.form-group input,
-.form-group select {
+
+.limite-form .form-group input,
+.limite-form .form-group select {
   width: 100%;
-  background: #0f172a;
-  border: 1px solid #334155;
+  background: var(--bg);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 9px 12px;
+  padding: 8px 11px;
+  font-family: var(--mono);
   font-size: 13px;
-  color: #e2e8f0;
+  color: var(--text);
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color .15s;
   box-sizing: border-box;
 }
- 
-.form-group input:focus,
-.form-group select:focus {
-  border-color: #3b82f6;
+.limite-form .form-group input:focus,
+.limite-form .form-group select:focus {
+  border-color: var(--accent);
 }
- 
-.form-group select option {
-  background: #1e293b;
-}
- 
-/* Blocco campo giorno/data condizionale */
-#limite-campo-giorno,
-#limite-campo-data {
-  display: none;
-}
-#limite-campo-giorno.visible,
-#limite-campo-data.visible {
-  display: block;
-}
- 
-/* Orari affiancati */
+
+/* Fascia oraria affiancata */
 .orari-row {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   gap: 8px;
   align-items: end;
 }
- 
-.orari-row .separatore {
-  color: #475569;
-  font-size: 18px;
+.orari-separatore {
+  color: var(--muted);
+  font-size: 14px;
   text-align: center;
-  padding-bottom: 9px;
+  padding-bottom: 8px;
 }
- 
+
+/* Campi condizionali giorno/data */
+#limite-campo-giorno { display: block; }
+#limite-campo-data   { display: none;  }
+
 /* Bottoni form */
 .limite-form-actions {
   display: flex;
@@ -345,63 +348,64 @@
   margin-top: 16px;
   justify-content: flex-end;
 }
- 
+
 .btn-salva-limite {
-  background: #3b82f6;
+  display: inline-flex;
+  align-items: center;
+  background: var(--accent);
   color: #fff;
   border: none;
   border-radius: 8px;
-  padding: 9px 20px;
-  font-size: 13px;
-  font-weight: 500;
+  padding: 8px 20px;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: .08em;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background .15s;
 }
- 
-.btn-salva-limite:hover { background: #2563eb; }
- 
+.btn-salva-limite:hover { background: var(--acc2); }
+
 .btn-annulla-limite {
+  display: inline-flex;
+  align-items: center;
   background: transparent;
-  color: #64748b;
-  border: 1px solid #334155;
+  color: var(--muted);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 9px 16px;
-  font-size: 13px;
+  padding: 8px 16px;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: .08em;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all .15s;
 }
- 
 .btn-annulla-limite:hover {
-  color: #e2e8f0;
-  border-color: #475569;
+  color: var(--text);
+  border-color: var(--text);
 }
- 
+
 /* Lista limiti */
 .limiti-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 7px;
 }
- 
+
+/* Card singolo limite */
 .limite-card {
-  background: #1e293b;
-  border: 1px solid #334155;
-  border-radius: 10px;
-  padding: 14px 16px;
   display: flex;
   align-items: center;
-  gap: 14px;
-  transition: border-color 0.15s;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--surf);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  transition: border-color .15s;
 }
- 
-.limite-card:hover {
-  border-color: #475569;
-}
- 
-.limite-card.inattivo {
-  opacity: 0.45;
-}
- 
+.limite-card:hover { border-color: var(--accent); }
+.limite-card.inattivo { opacity: 0.45; }
+
 /* Pallino tipo */
 .limite-tipo-dot {
   width: 8px;
@@ -409,56 +413,57 @@
   border-radius: 50%;
   flex-shrink: 0;
 }
- 
-.limite-tipo-dot.ricorrente { background: #f59e0b; }
-.limite-tipo-dot.una_tantum  { background: #818cf8; }
- 
+.limite-tipo-dot.ricorrente { background: var(--warn); }
+.limite-tipo-dot.una_tantum  { background: var(--accent); }
+
 /* Info limite */
-.limite-info {
-  flex: 1;
-  min-width: 0;
-}
- 
+.limite-info { flex: 1; min-width: 0; }
+
 .limite-info-top {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 3px;
+  margin-bottom: 2px;
+  flex-wrap: wrap;
 }
- 
+
 .limite-giorno-label {
+  font-family: var(--mono);
   font-size: 13px;
-  font-weight: 600;
-  color: #e2e8f0;
+  font-weight: 500;
+  color: var(--text);
 }
- 
+
 .limite-fascia {
-  font-size: 12px;
-  color: #94a3b8;
-  background: #0f172a;
-  padding: 2px 8px;
-  border-radius: 4px;
-}
- 
-.limite-max-badge {
+  font-family: var(--mono);
   font-size: 11px;
-  font-weight: 700;
+  color: var(--muted);
+  background: var(--surf2);
+  border: 1px solid var(--border);
   padding: 2px 8px;
   border-radius: 4px;
-  background: #1e3a5f;
-  color: #60a5fa;
-  border: 1px solid #1d4ed8;
 }
- 
+
+.limite-max-badge {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(232,80,10,.08);
+  color: var(--accent);
+  border: 1px solid rgba(232,80,10,.25);
+}
+
 .limite-motivo {
   font-size: 11px;
-  color: #475569;
+  color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
- 
-/* Toggle attivo/inattivo */
+
+/* Toggle switch */
 .toggle-switch {
   position: relative;
   width: 36px;
@@ -466,22 +471,19 @@
   flex-shrink: 0;
   cursor: pointer;
 }
- 
 .toggle-switch input {
   opacity: 0;
   width: 0;
   height: 0;
   position: absolute;
 }
- 
 .toggle-slider {
   position: absolute;
   inset: 0;
-  background: #334155;
+  background: var(--border);
   border-radius: 20px;
-  transition: background 0.2s;
+  transition: background .2s;
 }
- 
 .toggle-slider::before {
   content: "";
   position: absolute;
@@ -489,71 +491,49 @@
   height: 14px;
   left: 3px;
   top: 3px;
-  background: #64748b;
+  background: var(--muted);
   border-radius: 50%;
-  transition: transform 0.2s, background 0.2s;
+  transition: transform .2s, background .2s;
 }
- 
 .toggle-switch input:checked + .toggle-slider {
-  background: #1d4ed8;
+  background: var(--accent);
 }
- 
 .toggle-switch input:checked + .toggle-slider::before {
   transform: translateX(16px);
   background: #fff;
 }
- 
+
 /* Bottone elimina */
 .btn-elimina-limite {
   background: transparent;
   border: none;
-  color: #475569;
+  color: var(--muted);
   cursor: pointer;
   padding: 4px 6px;
   border-radius: 6px;
-  transition: color 0.15s, background 0.15s;
+  transition: color .15s, background .15s;
   flex-shrink: 0;
 }
- 
 .btn-elimina-limite:hover {
-  color: #f87171;
-  background: #450a0a30;
+  color: #e74c3c;
+  background: rgba(192,57,43,.08);
 }
- 
+
 /* Stato vuoto */
 .limiti-empty {
   text-align: center;
   padding: 28px 0;
-  color: #475569;
-  font-size: 13px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: .08em;
 }
- 
 .limiti-empty svg {
   display: block;
   margin: 0 auto 10px;
-  opacity: 0.3;
+  opacity: 0.25;
+  color: var(--muted);
 }
- 
-/* Bottone aggiungi */
-.btn-aggiungi-limite {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: transparent;
-  color: #3b82f6;
-  border: 1px dashed #1d4ed8;
-  border-radius: 8px;
-  padding: 8px 16px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s;
-}
- 
-.btn-aggiungi-limite:hover {
-  background: #1e3a5f30;
-  border-color: #3b82f6;
-    }
   </style>
 </head>
 <body>
