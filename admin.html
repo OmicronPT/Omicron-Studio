@@ -1000,14 +1000,14 @@ async function loadDisponibilita(){
         <div class="limite-form-grid">
           <div class="form-group">
             <label>Tipo</label>
-            <select id="limite-tipo" onchange="aggiornaFormTipo()">
+            <select id="limite-tipo" onchange="aggiornaFormTipo()" style="width:auto">
               <option value="ricorrente">Ricorrente (ogni settimana)</option>
               <option value="una_tantum">Una tantum (data specifica)</option>
             </select>
           </div>
           <div class="form-group" id="limite-campo-giorno" style="display:block">
             <label>Giorno</label>
-            <select id="limite-giorno">
+            <select id="limite-giorno" style="width:auto">
               <option value="1">Lunedì</option>
               <option value="2">Martedì</option>
               <option value="3">Mercoledì</option>
@@ -1017,7 +1017,7 @@ async function loadDisponibilita(){
           </div>
           <div class="form-group" id="limite-campo-data" style="display:none">
             <label>Data</label>
-            <input type="date" id="limite-data">
+            <input type="date" id="limite-data" style="width:auto">
           </div>
         </div>
         <div class="limite-form-grid" style="margin-top:12px">
@@ -1031,16 +1031,10 @@ async function loadDisponibilita(){
           </div>
           <div class="form-group">
             <label>Max persone per slot</label>
-            <select id="limite-max-persone">
+            <select id="limite-max-persone" style="width:auto">
               <option value="1">1 persona</option>
               <option value="2">2 persone</option>
             </select>
-          </div>
-        </div>
-        <div class="limite-form-grid full" style="margin-top:12px">
-          <div class="form-group">
-            <label>Motivo (opzionale)</label>
-            <input type="text" id="limite-motivo" placeholder="es. Collega presente in sala">
           </div>
         </div>
         <div class="limite-form-actions">
