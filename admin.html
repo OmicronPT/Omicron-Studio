@@ -1679,7 +1679,7 @@ async function salvaLimite() {
   const oraInizio  = document.getElementById("limite-ora-inizio").value;
   const oraFine    = document.getElementById("limite-ora-fine").value;
   const maxPersone = document.getElementById("limite-max-persone").value;
-  const motivo     = document.getElementById("limite-motivo").value;
+  const motivo = "";
 
   if (!oraInizio || !oraFine) { alert("Inserisci la fascia oraria."); return; }
   if (oraInizio >= oraFine)   { alert("L'orario di fine deve essere dopo l'orario di inizio."); return; }
