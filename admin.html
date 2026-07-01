@@ -1177,6 +1177,165 @@ function chiudiModal(id){document.getElementById(id).classList.remove("open");}
 document.querySelectorAll(".overlay").forEach(ov=>ov.addEventListener("click",e=>{if(e.target===ov)ov.classList.remove("open");}));
 document.getElementById("pw-input").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});
 function toast(msg,tipo){const el=document.getElementById("toast");el.textContent=msg;el.className="show "+(tipo||"");setTimeout(()=>el.className="",3500);}
+// ============================================================
+// LIMITI CAPIENZA — JavaScript per admin.html
+// Da aggiungere nello <script> esistente di admin.html
+// ============================================================
+
+const GIORNI_SETTIMANA = ["", "Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì"];
+
+// Carica i limiti — chiamata al doGet con get()
+async function caricaLimiti() {
+  const data = await get("adminGetLimiti");
+  renderLimiti(data.limiti || []);
+}
+
+function renderLimiti(limiti) {
+  const list    = document.getElementById("limiti-list");
+  const empty   = document.getElementById("limiti-empty");
+  const counter = document.getElementById("limiti-count");
+
+  counter.textContent = limiti.length;
+
+  // Rimuovi cards esistenti (non il div empty)
+  Array.from(list.children).forEach(c => {
+    if (!c.id || c.id !== "limiti-empty") c.remove();
+  });
+
+  if (limiti.length === 0) {
+    empty.style.display = "block";
+    return;
+  }
+
+  empty.style.display = "none";
+
+  limiti.forEach(l => {
+    const card = document.createElement("div");
+    card.className = "limite-card" + (l.attivo ? "" : " inattivo");
+    card.dataset.id = l.id;
+
+    const etichetta = l.tipo === "ricorrente"
+      ? `Ogni ${GIORNI_SETTIMANA[l.giornoSettimana] || "?"}`
+      : formatDataBreve(l.data);
+
+    const maxLabel = l.maxPersone == 1 ? "1 persona" : `${l.maxPersone} persone`;
+
+    card.innerHTML = `
+      <div class="limite-tipo-dot ${l.tipo}"></div>
+      <div class="limite-info">
+        <div class="limite-info-top">
+          <span class="limite-giorno-label">${etichetta}</span>
+          <span class="limite-fascia">${l.oraInizio}–${l.oraFine}</span>
+          <span class="limite-max-badge">max ${maxLabel}</span>
+        </div>
+        ${l.motivo ? `<div class="limite-motivo">${l.motivo}</div>` : ""}
+      </div>
+      <label class="toggle-switch" title="${l.attivo ? "Disattiva" : "Attiva"}">
+        <input type="checkbox" ${l.attivo ? "checked" : ""}
+          onchange="toggleLimite('${l.id}', this)">
+        <span class="toggle-slider"></span>
+      </label>
+      <button class="btn-elimina-limite" onclick="eliminaLimite('${l.id}')" title="Elimina">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+      </button>
+    `;
+
+    list.appendChild(card);
+  });
+}
+
+function formatDataBreve(dataStr) {
+  if (!dataStr) return "—";
+  const d = new Date(dataStr + "T12:00:00");
+  return d.toLocaleDateString("it-IT", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+// Mostra/nasconde form
+function toggleFormLimite() {
+  const form = document.getElementById("limite-form");
+  form.classList.toggle("visible");
+  if (form.classList.contains("visible")) aggiornaFormTipo();
+}
+
+// Aggiorna campo giorno/data in base al tipo selezionato
+function aggiornaFormTipo() {
+  const tipo        = document.getElementById("limite-tipo").value;
+  const campoGiorno = document.getElementById("limite-campo-giorno");
+  const campoData   = document.getElementById("limite-campo-data");
+
+  if (tipo === "ricorrente") {
+    campoGiorno.classList.add("visible");
+    campoData.classList.remove("visible");
+  } else {
+    campoGiorno.classList.remove("visible");
+    campoData.classList.add("visible");
+  }
+}
+
+// Salva nuovo limite — usa post()
+async function salvaLimite() {
+  const tipo       = document.getElementById("limite-tipo").value;
+  const oraInizio  = document.getElementById("limite-ora-inizio").value;
+  const oraFine    = document.getElementById("limite-ora-fine").value;
+  const maxPersone = document.getElementById("limite-max-persone").value;
+  const motivo     = document.getElementById("limite-motivo").value;
+
+  if (!oraInizio || !oraFine) { alert("Inserisci la fascia oraria."); return; }
+  if (oraInizio >= oraFine)   { alert("L'orario di fine deve essere dopo l'orario di inizio."); return; }
+
+  const body = { action: "adminAddLimite", tipo, oraInizio, oraFine, maxPersone, motivo };
+
+  if (tipo === "ricorrente") {
+    body.giornoSettimana = document.getElementById("limite-giorno").value;
+  } else {
+    const data = document.getElementById("limite-data").value;
+    if (!data) { alert("Inserisci una data."); return; }
+    body.data = data;
+  }
+
+  const res = await post(body);
+  if (res.success) {
+    toggleFormLimite();
+    resetFormLimite();
+    caricaLimiti();
+  } else {
+    alert("Errore: " + (res.error || res.errore || "salvataggio fallito"));
+  }
+}
+
+function resetFormLimite() {
+  document.getElementById("limite-tipo").value         = "ricorrente";
+  document.getElementById("limite-giorno").value       = "1";
+  document.getElementById("limite-data").value         = "";
+  document.getElementById("limite-ora-inizio").value   = "09:00";
+  document.getElementById("limite-ora-fine").value     = "11:00";
+  document.getElementById("limite-max-persone").value  = "1";
+  document.getElementById("limite-motivo").value       = "";
+  aggiornaFormTipo();
+}
+
+// Toggle attivo/inattivo — usa post()
+async function toggleLimite(id, checkbox) {
+  const res = await post({ action: "adminToggleLimite", id });
+  if (!res.success) {
+    checkbox.checked = !checkbox.checked; // ripristina
+    alert("Errore: " + (res.error || res.errore || "toggle fallito"));
+  } else {
+    const card = checkbox.closest(".limite-card");
+    if (card) card.classList.toggle("inattivo", !res.attivo);
+  }
+}
+
+// Elimina limite — usa post()
+async function eliminaLimite(id) {
+  if (!confirm("Eliminare questo limite capienza?")) return;
+  const res = await post({ action: "adminDelLimite", id });
+  if (res.success) {
+    caricaLimiti();
+  } else {
+    alert("Errore: " + (res.error || res.errore || "eliminazione fallita"));
+  }
+}
 </script>
 </body>
 </html>
