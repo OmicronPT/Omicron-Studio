@@ -344,6 +344,15 @@
   <div class="modal">
     <h3>Conferma prenotazione</h3>
     <p id="modal-txt"></p>
+    <div id="ricorrenza-wrap" style="margin-bottom:22px">
+      <label for="sel-ricorrenza" style="display:block;font-size:13px;color:var(--muted);margin-bottom:8px">Ripeti prenotazione</label>
+      <select id="sel-ricorrenza" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;background:var(--surface);color:var(--text);cursor:pointer">
+        <option value="1">Solo questa volta</option>
+        <option value="2">Per 2 settimane</option>
+        <option value="3">Per 3 settimane</option>
+        <option value="4">Per 4 settimane</option>
+      </select>
+    </div>
     <div class="ma">
       <button class="btn btn-sm" style="border:1px solid var(--border)" onclick="chiudiModal('ov')">Annulla</button>
       <button class="btn btn-p btn-sm" id="btn-ok-prenota">Conferma</button>
@@ -636,9 +645,17 @@ function selezionaGiorno(dateStr){
 // ── AZIONI ─────────────────────────────────────────────────
 function apriModalPrenota(data,ora,oraFine,dataLabel){
   document.getElementById("modal-txt").textContent=`${dataLabel} — dalle ${ora} alle ${oraFine}`;
-  document.getElementById("btn-ok-prenota").onclick=()=>prenota(data,ora);
+  document.getElementById("ricorrenza-wrap").style.display="";
+  document.getElementById("sel-ricorrenza").value="1";
+  document.getElementById("btn-ok-prenota").textContent="Conferma";
+  document.getElementById("btn-ok-prenota").onclick=()=>{
+    const n=parseInt(document.getElementById("sel-ricorrenza").value)||1;
+    if(n>1) prenotaRicorrente(data,ora,n);
+    else prenota(data,ora);
+  };
   apriModal("ov");
 }
+
 
 async function prenota(data,ora){
   chiudiModal("ov");
@@ -651,7 +668,20 @@ async function prenota(data,ora){
   renderClientePill(); renderListaAttesa(); renderPrenotazioni(); renderCal();
   if(giornoSelezionato) selezionaGiorno(giornoSelezionato);
 }
-
+async function prenotaRicorrente(data,ora,settimane){
+  chiudiModal("ov");
+  const res=await post({action:"prenotaRicorrente",data,oraInizio:ora,settimane});
+  if(res.error){toast(res.error,"err");return;}
+  const nOk=res.prenotate?res.prenotate.length:0;
+  const nKo=res.saltate?res.saltate.length:0;
+  if(nKo>0) toast(`Prenotate ${nOk} sessioni su ${nOk+nKo}. ${nKo} non disponibili.`,"ok");
+  else      toast(`${nOk} sessioni prenotate!`,"ok");
+  cliente.lezioniRim=res.lezioniRimanenti;
+  const[s,p,a]=await Promise.all([get("getSlotDisponibili"),get("getPrenotazioni"),get("getListaAttesa")]);
+  slotsData=Array.isArray(s)?s:[]; prenotazioni=Array.isArray(p)?p:[]; listaAttesa=Array.isArray(a)?a:[];
+  renderClientePill(); renderListaAttesa(); renderPrenotazioni(); renderCal();
+  if(giornoSelezionato) selezionaGiorno(giornoSelezionato);
+}
 function apriModalCanc(id,dataLabel,ora){
   document.getElementById("modal-canc-txt").textContent=`Cancelli il ${dataLabel} alle ${ora}? La lezione verrà riaccreditata.`;
   document.getElementById("btn-ok-canc").onclick=()=>cancella(id);
@@ -660,6 +690,7 @@ function apriModalCanc(id,dataLabel,ora){
 
 function apriModalAttesa(data,ora,oraFine,dataLabel){
   document.getElementById("modal-txt").textContent=`Vuoi entrare in lista d'attesa per ${dataLabel} alle ${ora}? Ti avviseremo subito se si libera un posto.`;
+  document.getElementById("ricorrenza-wrap").style.display="none";
   document.getElementById("btn-ok-prenota").textContent="Entra in lista";
   document.getElementById("btn-ok-prenota").onclick=()=>iscriviAttesa(data,ora);
   apriModal("ov");
