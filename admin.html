@@ -1666,11 +1666,11 @@ function aggiornaFormTipo() {
   const campoData   = document.getElementById("limite-campo-data");
 
   if (tipo === "ricorrente") {
-    campoGiorno.classList.add("visible");
-    campoData.classList.remove("visible");
+    campoGiorno.style.display = "block";
+    campoData.style.display   = "none";
   } else {
-    campoGiorno.classList.remove("visible");
-    campoData.classList.add("visible");
+    campoGiorno.style.display = "none";
+    campoData.style.display   = "block";
   }
 }
 
