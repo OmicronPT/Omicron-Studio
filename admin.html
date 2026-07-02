@@ -1588,6 +1588,7 @@ const GIORNI_SETTIMANA = ["", "Lunedì", "Martedì", "Mercoledì", "Giovedì", "
 // Carica i limiti — chiamata al doGet con get()
 async function caricaLimiti() {
   const data = await get("adminGetLimiti");
+  console.log("Limiti ricevuti:", JSON.stringify(data));
   renderLimiti(data.limiti || []);
 }
 
