@@ -418,9 +418,16 @@ async function init(){
   if(!TOKEN){showError("🔒","Link non valido. Contatta lo studio.");return;}
   if(BACKEND_URL==="INSERISCI_QUI_URL_APPS_SCRIPT"){showError("⚙️","Backend non configurato.");return;}
   try{
-    const [c,s,p,a,sc,lg,pk]=await Promise.all([get("getCliente"),get("getSlotDisponibili"),get("getPrenotazioni"),get("getListaAttesa"),get("getSchedeCliente"),get("getLogCliente"),get("adminPacchetti")]);
-    if(c.error)throw new Error(c.error);
-    cliente=c; slotsData=Array.isArray(s)?s:[]; prenotazioni=Array.isArray(p)?p:[]; listaAttesa=Array.isArray(a)?a:[]; schedeList=Array.isArray(sc)?sc:[]; logList=Array.isArray(lg)?lg:[]; pkgList=Array.isArray(pk)?pk:[];
+    const d=await get("getInitData");
+    if(d.error)throw new Error(d.error);
+    if(d.cliente&&d.cliente.error)throw new Error(d.cliente.error);
+    cliente=d.cliente;
+    slotsData=Array.isArray(d.slot)?d.slot:[];
+    prenotazioni=Array.isArray(d.prenotazioni)?d.prenotazioni:[];
+    listaAttesa=Array.isArray(d.listaAttesa)?d.listaAttesa:[];
+    schedeList=Array.isArray(d.schede)?d.schede:[];
+    logList=Array.isArray(d.log)?d.log:[];
+    pkgList=Array.isArray(d.pacchetti)?d.pacchetti:[];
     renderClientePill();
     renderRinnovo();
     renderListaAttesa();
