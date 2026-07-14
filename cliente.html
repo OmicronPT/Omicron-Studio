@@ -690,7 +690,7 @@ async function prenotaRicorrente(data,ora,settimane){
   if(giornoSelezionato) selezionaGiorno(giornoSelezionato);
 }
 function apriModalCanc(id,dataLabel,ora){
-  document.getElementById("modal-canc-txt").textContent=`Cancelli il ${dataLabel} alle ${ora}? La lezione verrà riaccreditata.`;
+  document.getElementById("modal-canc-txt").textContent=`Cancelli il ${dataLabel} alle ${ora}? Se non hai superato il limite di cancellazioni gratuite di questo mese, la lezione verrà riaccreditata.`;
   document.getElementById("btn-ok-canc").onclick=()=>cancella(id);
   apriModal("ov-canc");
 }
@@ -729,7 +729,8 @@ async function cancella(id){
   chiudiModal("ov-canc");
   const res=await post({action:"cancella",idPrenotazione:id});
   if(res.error){toast(res.error,"err");return;}
-  toast("Prenotazione cancellata. Lezione riaccreditata.","ok");
+  if(res.recreditata) toast("Prenotazione cancellata. Lezione riaccreditata.","ok");
+  else toast("Prenotazione cancellata. Limite mensile raggiunto: lezione non riaccreditata.","err");
   cliente.lezioniRim=res.lezioniRimanenti;
   const[s,p]=await Promise.all([get("getSlotDisponibili"),get("getPrenotazioni")]);
   slotsData=Array.isArray(s)?s:[]; prenotazioni=Array.isArray(p)?p:[];
