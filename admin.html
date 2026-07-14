@@ -786,8 +786,12 @@ let calData=[], clienteCorrente=null, giornoSelezionato="", _clienteCorrenteObj=
 async function doLogin(){
   const pw=document.getElementById("pw-input").value;
   if(!pw)return;
-  const res=await jsonp(BACKEND_URL+"?action=adminLogin&pw="+encodeURIComponent(pw));
-  if(res.ok){PW=pw;document.getElementById("login-screen").style.display="none";document.getElementById("app").style.display="block";await caricaPacchetti();loadDashboard();}
+  let res;
+  try{
+    const r=await fetch(BACKEND_URL,{method:"POST",body:JSON.stringify({action:"adminLogin",pw:pw})});
+    res=await r.json();
+  }catch(e){res={error:e.message};}
+  if(res.ok){PW=res.token;document.getElementById("login-screen").style.display="none";document.getElementById("app").style.display="block";await caricaPacchetti();loadDashboard();}
   else document.getElementById("login-err").textContent="Password non valida";
 }
 function logout(){PW="";location.reload();}
