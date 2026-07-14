@@ -1351,7 +1351,8 @@ async function apriDettaglioCliente(id){
     <div class="detail-item"><div class="detail-label">Instagram</div><div class="detail-value">${c.instagram?`<a href="https://instagram.com/${c.instagram.replace('@','')}" target="_blank">${c.instagram}</a>`:"—"}</div></div>
     <div class="detail-item"><div class="detail-label">Facebook</div><div class="detail-value">${c.facebook||"—"}</div></div>
     </div><div style="margin-top:12px"><div class="link-box">${link}</div>
-    <button class="btn btn-secondary btn-sm" onclick="navigator.clipboard.writeText('${link}').then(()=>toast('Link copiato!','ok'))">Copia link</button></div>`;
+    <button class="btn btn-secondary btn-sm" onclick="navigator.clipboard.writeText('${link}').then(()=>toast('Link copiato!','ok'))">Copia link</button>
+    <button class="btn btn-secondary btn-sm" onclick="rigeneraLinkCliente('${c.id}')">Rigenera link</button></div>`;
   document.getElementById("tab-pacchetto").innerHTML=`<div class="detail-grid">
     <div class="detail-item"><div class="detail-label">Pacchetto</div><div class="detail-value">${c.pacchetto}</div></div>
     <div class="detail-item"><div class="detail-label">Lezioni rimanenti</div><div class="detail-value" style="${c.lezioniRim<=2?'color:var(--warn)':''}">${c.lezioniRim} / ${c.lezioniTot}</div></div>
@@ -1396,6 +1397,15 @@ function apriModificaCliente(c){
   apriModal("ov-cliente");
 }
 
+async function rigeneraLinkCliente(id){
+  if(!confirm("Il vecchio link smetterà di funzionare subito e ne verrà creato uno nuovo da mandare al cliente. Continuare?"))return;
+  const res=await post({action:"adminRigeneraToken",id});
+  if(res.error){toast(res.error,"err");return;}
+  try{await navigator.clipboard.writeText(res.link);toast("Nuovo link generato e copiato!","ok");}
+  catch(e){toast("Nuovo link generato: "+res.link,"ok");}
+  chiudiModal("ov-dettaglio");
+  loadClienti();
+}
 function editLezioni(id,current){
   const n=prompt("Lezioni rimanenti:",current);if(n===null||isNaN(parseInt(n)))return;
   post({action:"adminEditCliente",id,lezioniRim:parseInt(n)}).then(res=>{if(res.error){toast(res.error,"err");return;}toast("Lezioni aggiornate","ok");chiudiModal("ov-dettaglio");loadClienti();});
