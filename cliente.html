@@ -690,7 +690,20 @@ async function prenotaRicorrente(data,ora,settimane){
   if(giornoSelezionato) selezionaGiorno(giornoSelezionato);
 }
 function apriModalCanc(id,dataLabel,ora){
-  document.getElementById("modal-canc-txt").textContent=`Cancelli il ${dataLabel} alle ${ora}? Se non hai superato il limite di cancellazioni gratuite di questo mese, la lezione verrà riaccreditata.`;
+  // NB: 3 deve restare allineato con LIMITE_CANC_MESE lato backend (funzione cancellaPrenotazione in codice_gs.txt).
+  // Se in futuro cambia il limite li', va cambiato anche qui.
+  const LIMITE_CANC_MESE=3;
+  const oggi=new Date();
+  const cancMese=logList.filter(l=>{
+    if(l.tipo!=="Cancellazione")return false;
+    const d=new Date(String(l.data).replace(" ","T"));
+    return d.getFullYear()===oggi.getFullYear()&&d.getMonth()===oggi.getMonth();
+  }).length;
+  const verraRiaccreditata=cancMese<LIMITE_CANC_MESE;
+  const msg=verraRiaccreditata
+    ? `Cancelli il ${dataLabel} alle ${ora}? La lezione verrà riaccreditata al tuo pacchetto. Cancellazioni gratuite rimanenti dopo questa: ${LIMITE_CANC_MESE-cancMese-1}.`
+    : `Cancelli il ${dataLabel} alle ${ora}? Hai già raggiunto il limite di ${LIMITE_CANC_MESE} cancellazioni gratuite questo mese: la lezione NON verrà riaccreditata.`;
+  document.getElementById("modal-canc-txt").textContent=msg;
   document.getElementById("btn-ok-canc").onclick=()=>cancella(id);
   apriModal("ov-canc");
 }
