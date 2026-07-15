@@ -681,7 +681,7 @@ async function prenotaRicorrente(data,ora,settimane){
   if(res.error){toast(res.error,"err");return;}
   const nOk=res.prenotate?res.prenotate.length:0;
   const nKo=res.saltate?res.saltate.length:0;
-  if(nKo>0) toast(`Prenotate ${nOk} sessioni su ${nOk+nKo}. ${nKo} non disponibili.`,"ok");
+  if(nKo>0) toast(`Prenotate ${nOk} sessioni su ${nOk+nKo}. ${nKo} non disponibil${nKo===1?'e':'i'}.`,"ok");
   else      toast(`${nOk} sessioni prenotate!`,"ok");
   cliente.lezioniRim=res.lezioniRimanenti;
   const[s,p,a]=await Promise.all([get("getSlotDisponibili"),get("getPrenotazioni"),get("getListaAttesa")]);
