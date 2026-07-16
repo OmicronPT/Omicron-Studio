@@ -4,6 +4,42 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Omicron Studio — Prenota</title>
+
+  <!-- PWA: icona, colori, comportamento "app" -->
+  <meta name="theme-color" content="#E8500A"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Omicron"/>
+  <link rel="apple-touch-icon" href="apple-touch-icon.png"/>
+  <script>
+    // Genera il manifest al volo, includendo il link ESATTO di questa pagina
+    // (con il token del cliente), cosi' chi installa l'app riapre sempre
+    // la propria pagina personale e non una pagina generica senza token.
+    (function(){
+      var base = window.location.origin + window.location.pathname.replace(/[^/]*$/, "");
+      var manifest = {
+        name: "Omicron Studio",
+        short_name: "Omicron",
+        description: "Prenota le tue lezioni in Omicron Studio",
+        start_url: window.location.href,
+        scope: base,
+        display: "standalone",
+        orientation: "portrait",
+        background_color: "#ffffff",
+        theme_color: "#E8500A",
+        icons: [
+          { src: base + "icon-192.png", sizes: "192x192", type: "image/png", purpose: "any maskable" },
+          { src: base + "icon-512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" }
+        ]
+      };
+      var blob = new Blob([JSON.stringify(manifest)], {type: "application/json"});
+      var link = document.createElement("link");
+      link.rel = "manifest";
+      link.href = URL.createObjectURL(blob);
+      document.head.appendChild(link);
+    })();
+  </script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
   <style>
