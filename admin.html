@@ -607,7 +607,17 @@
         <div class="page-title">Clienti</div>
         <div class="section-header">
           <div class="page-sub" style="margin:0">Gestione clienti e pacchetti</div>
-          <button class="btn btn-primary" onclick="apriAddCliente()">+ Aggiungi cliente</button>
+          <div style="display:flex;gap:8px;align-items:center">
+            <select id="clienti-sort" onchange="renderClienti()" style="padding:8px 10px;border-radius:8px">
+              <option value="nome-asc">Nome A → Z</option>
+              <option value="nome-desc">Nome Z → A</option>
+              <option value="scadenza-asc">Scadenza: più vicina prima</option>
+              <option value="scadenza-desc">Scadenza: più lontana prima</option>
+              <option value="lezioni-asc">Lezioni rimaste: meno prima</option>
+              <option value="lezioni-desc">Lezioni rimaste: più prima</option>
+            </select>
+            <button class="btn btn-primary" onclick="apriAddCliente()">+ Aggiungi cliente</button>
+          </div>
         </div>
         <div id="clienti-content"><div class="spin"></div></div>
       </div>
@@ -1271,11 +1281,30 @@ document.addEventListener("DOMContentLoaded",()=>{
 // ── CLIENTI ───────────────────────────────────────────────
 async function caricaPacchetti(){pacchetti=await get("adminPacchetti");}
 
+let clientiCache=null;
+
 async function loadClienti(){
   document.getElementById("clienti-content").innerHTML='<div class="spin"></div>';
   const data=await get("adminClienti");
-  if(!Array.isArray(data)||!data.length){document.getElementById("clienti-content").innerHTML='<div class="empty-state">Nessun cliente</div>';return;}
-  const attivi=data.filter(c=>c.stato==="Attivo");
+  if(!Array.isArray(data)||!data.length){clientiCache=null;document.getElementById("clienti-content").innerHTML='<div class="empty-state">Nessun cliente</div>';return;}
+  clientiCache=data.filter(c=>c.stato==="Attivo");
+  renderClienti();
+}
+
+function renderClienti(){
+  if(!clientiCache){return;}
+  if(!clientiCache.length){document.getElementById("clienti-content").innerHTML='<div class="empty-state">Nessun cliente</div>';return;}
+  const ordine=document.getElementById("clienti-sort").value;
+  const attivi=[...clientiCache];
+  attivi.sort((a,b)=>{
+    if(ordine==="nome-asc")return (a.cognome+a.nome).localeCompare(b.cognome+b.nome,"it",{sensitivity:"base"});
+    if(ordine==="nome-desc")return (b.cognome+b.nome).localeCompare(a.cognome+a.nome,"it",{sensitivity:"base"});
+    if(ordine==="scadenza-asc")return new Date(a.dataScad)-new Date(b.dataScad);
+    if(ordine==="scadenza-desc")return new Date(b.dataScad)-new Date(a.dataScad);
+    if(ordine==="lezioni-asc")return a.lezioniRim-b.lezioniRim;
+    if(ordine==="lezioni-desc")return b.lezioniRim-a.lezioniRim;
+    return 0;
+  });
   document.getElementById("clienti-content").innerHTML=`<div class="table-wrap"><table>
     <tr><th>Cliente</th><th>Età</th><th>Pacchetto</th><th>Lezioni</th><th>Scadenza</th><th>Stato</th><th></th></tr>
     ${attivi.map(c=>{
