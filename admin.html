@@ -1126,6 +1126,19 @@ async function eliminaBlocco(id){
   loadDisponibilita();
 }
 
+// Segna una prenotazione come "Non presentato" (assenza). La lezione NON viene
+// riaccreditata e non viene inviato alcun messaggio al cliente: resta visibile
+// solo nel pannello admin (storico attività del cliente).
+async function segnaAssenza(idPrenotazione, dateStr){
+  if(!confirm("Segnare questo cliente come non presentato?\nLa lezione NON verrà riaccreditata.")) return;
+  const res=await post({action:"adminSegnaAssenza",id:idPrenotazione});
+  if(res.error){toast(res.error,"err");return;}
+  toast("Cliente segnato come non presentato","ok");
+  calData=await get("adminCalendario");
+  renderCal();
+  apriDettaglioGiorno(dateStr);
+}
+
 // ── DETTAGLIO GIORNO ──────────────────────────────────────
 // Genera tutti gli slot teorici del giorno (client-side, per l'admin)
 function _slotDelGiornoAdmin(){
@@ -1176,13 +1189,21 @@ function apriDettaglioGiorno(dateStr){
   const appuntamenti=slotsInfo.filter(s=>s.count>0&&!s.bloccato).sort((a,b)=>a.ora.localeCompare(b.ora));
   if(appuntamenti.length){
     html+=`<div style="font-family:var(--serif);font-size:16px;margin-bottom:10px">📋 Agenda</div>`;
-    html+=appuntamenti.map(s=>`<div class="agenda-item">
+    html+=appuntamenti.map(s=>{
+      const righeClienti=(s.prenotazioni&&s.prenotazioni.length?s.prenotazioni:[]).map(p=>
+        `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:3px 0">
+          <span>${p.nome}</span>
+          <button class="btn btn-sm" style="font-size:11px;padding:3px 8px;color:var(--muted);border:1px solid var(--border)" onclick="segnaAssenza('${p.id}','${dateStr}')">Non presentato</button>
+        </div>`
+      ).join("");
+      return `<div class="agenda-item">
       <div class="agenda-ora">${s.ora}</div>
-      <div>
-        <div class="agenda-nomi">${s.clienti&&s.clienti.length?s.clienti.join(", "):"—"}</div>
+      <div style="flex:1">
+        ${righeClienti||`<div class="agenda-nomi">—</div>`}
         <div class="agenda-posti">${s.count}/3 posti occupati</div>
       </div>
-    </div>`).join("");
+    </div>`;
+    }).join("");
     html+=`<div style="height:16px"></div>`;
   }
 
