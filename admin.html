@@ -681,6 +681,7 @@
         </select>
       </div>
       <div class="form-group" style="grid-column:1/-1"><label class="form-label">Indirizzo</label><input class="form-input" type="text" id="c-indirizzo"/></div>
+      <div class="form-group"><label class="form-label">Scadenza certificato medico</label><input class="form-input" type="date" id="c-certificato"/></div>
       <div class="form-section-title">Contatti</div>
       <div class="form-group"><label class="form-label">Telefono WhatsApp</label><input class="form-input" type="text" id="c-tel" placeholder="393331234567"/></div>
       <div class="form-group"><label class="form-label">Email</label><input class="form-input" type="email" id="c-email"/></div>
@@ -1327,6 +1328,7 @@ function apriAddCliente(){
   document.getElementById("btn-salva-cliente").textContent="Salva";
   ["c-nome","c-cognome","c-tel","c-email","c-indirizzo","c-instagram","c-facebook","c-anamnesi"].forEach(id=>document.getElementById(id).value="");
   document.getElementById("c-nascita").value="";document.getElementById("c-sesso").value="";
+  document.getElementById("c-certificato").value="";
   document.getElementById("pkg-custom-fields").style.display="none";
   document.getElementById("c-pkg-nome").value="";
   document.getElementById("c-pkg-lezioni").value="10";
@@ -1340,7 +1342,7 @@ function apriAddCliente(){
 async function salvaCliente(){
   const nome=document.getElementById("c-nome").value.trim(),cognome=document.getElementById("c-cognome").value.trim();
   if(!nome||!cognome){toast("Nome e cognome obbligatori","err");return;}
-  const payload={nome,cognome,telefono:document.getElementById("c-tel").value.trim(),email:document.getElementById("c-email").value.trim(),dataNascita:document.getElementById("c-nascita").value,sesso:document.getElementById("c-sesso").value,indirizzo:document.getElementById("c-indirizzo").value.trim(),instagram:document.getElementById("c-instagram").value.trim(),facebook:document.getElementById("c-facebook").value.trim(),noteAnamnesi:document.getElementById("c-anamnesi").value.trim(),idPacchetto:document.getElementById("c-pkg").value};
+  const payload={nome,cognome,telefono:document.getElementById("c-tel").value.trim(),email:document.getElementById("c-email").value.trim(),dataNascita:document.getElementById("c-nascita").value,sesso:document.getElementById("c-sesso").value,indirizzo:document.getElementById("c-indirizzo").value.trim(),instagram:document.getElementById("c-instagram").value.trim(),facebook:document.getElementById("c-facebook").value.trim(),noteAnamnesi:document.getElementById("c-anamnesi").value.trim(),scadCertificato:document.getElementById("c-certificato").value,idPacchetto:document.getElementById("c-pkg").value};
   let res;
   if(clienteCorrente){res=await post({action:"adminEditCliente",id:clienteCorrente,...payload});if(res.error){toast(res.error,"err");return;}toast("Cliente aggiornato!","ok");}
   else{res=await post({action:"adminAddCliente",...payload});if(res.error){toast(res.error,"err");return;}toast("Cliente aggiunto!","ok");if(res.link)setTimeout(()=>apriLinkCliente(nome+" "+cognome,res.link),400);}
@@ -1366,6 +1368,9 @@ async function apriDettaglioCliente(id){
   const ini=(c.nome[0]+c.cognome[0]).toUpperCase();
   const eta=c.dataNascita?Math.floor((new Date()-new Date(c.dataNascita))/3.15576e10)+"anni":"—";
   const gg=Math.ceil((new Date(c.dataScad)-new Date())/864e5);
+  const ggCert=c.scadCertificato?Math.ceil((new Date(c.scadCertificato)-new Date())/864e5):null;
+  const certLabel=!c.scadCertificato?"—":c.scadCertificato+(ggCert<0?" — SCADUTO":ggCert<=30?` (tra ${ggCert}gg)`:"");
+  const certStyle=!c.scadCertificato?"":ggCert<0?"color:var(--err,#dc2626)":ggCert<=30?"color:var(--warn)":"";
   _clienteCorrenteObj=c;
   document.getElementById("det-avatar").textContent=ini;
   document.getElementById("det-name").textContent=c.nome+" "+c.cognome;
@@ -1377,6 +1382,7 @@ async function apriDettaglioCliente(id){
     <div class="detail-item"><div class="detail-label">Telefono</div><div class="detail-value">${c.telefono||"—"}</div></div>
     <div class="detail-item"><div class="detail-label">Email</div><div class="detail-value">${c.email||"—"}</div></div>
     <div class="detail-item"><div class="detail-label">Indirizzo</div><div class="detail-value">${c.indirizzo||"—"}</div></div>
+    <div class="detail-item"><div class="detail-label">Certificato medico</div><div class="detail-value" style="${certStyle}">${certLabel}</div></div>
     <div class="detail-item"><div class="detail-label">Instagram</div><div class="detail-value">${c.instagram?`<a href="https://instagram.com/${c.instagram.replace('@','')}" target="_blank">${c.instagram}</a>`:"—"}</div></div>
     <div class="detail-item"><div class="detail-label">Facebook</div><div class="detail-value">${c.facebook||"—"}</div></div>
     </div><div style="margin-top:12px"><div class="link-box">${link}</div>
@@ -1421,6 +1427,7 @@ function apriModificaCliente(c){
   document.getElementById("c-nascita").value=c.dataNascita||"";document.getElementById("c-sesso").value=c.sesso||"";
   document.getElementById("c-indirizzo").value=c.indirizzo||"";document.getElementById("c-instagram").value=c.instagram||"";
   document.getElementById("c-facebook").value=c.facebook||"";document.getElementById("c-anamnesi").value=c.noteAnamnesi||"";
+  document.getElementById("c-certificato").value=c.scadCertificato||"";
   const sel=document.getElementById("c-pkg");
   sel.innerHTML=pacchetti.map(p=>`<option value="${p.id}" ${p.nome===c.pacchetto?"selected":""}>${p.nome} — €${p.prezzo}${p.descrizione?" · "+p.descrizione:""}</option>`).join("")+'<option value="CUSTOM">✏️ Personalizzato</option>';
   apriModal("ov-cliente");
