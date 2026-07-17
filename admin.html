@@ -1287,7 +1287,7 @@ async function loadClienti(){
   document.getElementById("clienti-content").innerHTML='<div class="spin"></div>';
   const data=await get("adminClienti");
   if(!Array.isArray(data)||!data.length){clientiCache=null;document.getElementById("clienti-content").innerHTML='<div class="empty-state">Nessun cliente</div>';return;}
-  clientiCache=data.filter(c=>c.stato==="Attivo");
+  clientiCache=data.filter(c=>c.stato!=="Eliminato");
   renderClienti();
 }
 
@@ -1314,7 +1314,7 @@ function renderClienti(){
         <td><b>${c.nome} ${c.cognome}</b></td><td>${eta}</td><td>${c.pacchetto}</td>
         <td style="${c.lezioniRim<=2?'color:var(--warn)':''}">${c.lezioniRim}/${c.lezioniTot}</td>
         <td style="${gg<=7?'color:var(--warn)':''}">${c.dataScad}</td>
-        <td><span class="badge badge-ok">Attivo</span></td>
+        <td><span class="badge ${c.stato==="Attivo"?"badge-ok":c.stato==="Annullato"?"badge-mut":"badge-err"}">${c.stato}</span></td>
         <td><button class="btn btn-secondary btn-sm" onclick="apriDettaglioCliente('${c.id}')">Dettaglio</button></td>
       </tr>`;
     }).join("")}
@@ -1481,7 +1481,10 @@ async function loadTabRinnovo(c){
         </div>
       </div>
       <button class="btn btn-primary" onclick="eseguiRinnovo('${c.id}')">✓ Rinnova abbonamento</button>
-    </div>`;
+    </div>
+    ${c.stato!=="Annullato"?`<div style="margin-top:14px;text-align:right">
+      <button class="btn btn-danger btn-sm" onclick="annullaAbbonamentoCliente('${c.id}')">✕ Annulla abbonamento</button>
+    </div>`:`<div style="margin-top:14px;color:var(--muted);font-size:13px;text-align:right">Abbonamento già annullato</div>`}`;
 }
 
 async function loadTabSchede(c){
@@ -1575,8 +1578,8 @@ async function loadTabLog(c){
     return;
   }
 
-  const iconMap={Prenotazione:"💪",Cancellazione:"❌",Rinnovo:"🔄"};
-  const clsMap={Prenotazione:"log-pre",Cancellazione:"log-canc",Rinnovo:"log-rinn"};
+  const iconMap={Prenotazione:"💪",Cancellazione:"❌",Rinnovo:"🔄",Annullamento:"🚫"};
+  const clsMap={Prenotazione:"log-pre",Cancellazione:"log-canc",Rinnovo:"log-rinn",Annullamento:"log-canc"};
 
   tab.innerHTML=`<div style="padding:4px 0">${log.map(l=>`
     <div class="log-item">
@@ -1595,6 +1598,14 @@ async function eseguiRinnovo(idCliente){
   const res=await post({action:"adminRinnovaAbbonamento",id:idCliente,idPacchetto,lezioniRecuperabili});
   if(res.error){toast(res.error,"err");return;}
   toast(`Abbonamento rinnovato! ${res.nuoveLezioni} lezioni disponibili.`,"ok");
+  chiudiModal("ov-dettaglio");
+  loadClienti();
+}
+async function annullaAbbonamentoCliente(id){
+  if(!confirm("Annullare l'abbonamento di questo cliente?\n\nLe eventuali prenotazioni future verranno cancellate automaticamente.\nIl cliente resterà nella lista clienti, ma con l'abbonamento disattivato (0 lezioni).\n\nContinuare?"))return;
+  const res=await post({action:"adminAnnullaAbbonamento",id});
+  if(res.error){toast(res.error,"err");return;}
+  toast(`Abbonamento annullato${res.prenotazioniCancellate>0?` (${res.prenotazioniCancellate} prenotazione/i futura/e cancellata/e)`:''}`,"ok");
   chiudiModal("ov-dettaglio");
   loadClienti();
 }
