@@ -703,7 +703,7 @@ function apriModalPrenota(data,ora,oraFine,dataLabel){
 async function prenota(data,ora){
   chiudiModal("ov");
   const res=await post({action:"prenota",data,oraInizio:ora});
-  if(res.error){toast(res.error,"err");return;}
+  if(!res||!res.ok){toast((res&&res.error)||"Errore di connessione. Riprova.","err");return;}
   toast("Prenotazione confermata!","ok");
   cliente.lezioniRim=res.lezioniRimanenti;
   const[s,p,a]=await Promise.all([get("getSlotDisponibili"),get("getPrenotazioni"),get("getListaAttesa")]);
@@ -714,7 +714,7 @@ async function prenota(data,ora){
 async function prenotaRicorrente(data,ora,settimane){
   chiudiModal("ov");
   const res=await post({action:"prenotaRicorrente",data,oraInizio:ora,settimane});
-  if(res.error){toast(res.error,"err");return;}
+  if(!res||!res.ok){toast((res&&res.error)||"Errore di connessione. Riprova.","err");return;}
   const nOk=res.prenotate?res.prenotate.length:0;
   const nKo=res.saltate?res.saltate.length:0;
   if(nKo>0) toast(`Prenotate ${nOk} sessioni su ${nOk+nKo}. ${nKo} non disponibil${nKo===1?'e':'i'}.`,"ok");
@@ -756,7 +756,7 @@ async function iscriviAttesa(data,oraInizio){
   chiudiModal("ov");
   document.getElementById("btn-ok-prenota").textContent="Conferma";
   const res=await post({action:"iscriviListaAttesa",data,oraInizio});
-  if(res.error){toast(res.error,"err");return;}
+  if(!res||!res.ok){toast((res&&res.error)||"Errore di connessione. Riprova.","err");return;}
   toast(`Sei in lista d'attesa! Posizione: ${res.posizione}`,"ok");
   const[s,p,a]=await Promise.all([get("getSlotDisponibili"),get("getPrenotazioni"),get("getListaAttesa")]);
   slotsData=Array.isArray(s)?s:[]; prenotazioni=Array.isArray(p)?p:[]; listaAttesa=Array.isArray(a)?a:[];
@@ -766,7 +766,7 @@ async function iscriviAttesa(data,oraInizio){
 
 async function cancellaAttesa(id){
   const res=await post({action:"cancellaListaAttesa",id});
-  if(res.error){toast(res.error,"err");return;}
+  if(!res||!res.ok){toast((res&&res.error)||"Errore di connessione. Riprova.","err");return;}
   toast("Rimosso dalla lista d'attesa","ok");
   const[s,p,a]=await Promise.all([get("getSlotDisponibili"),get("getPrenotazioni"),get("getListaAttesa")]);
   slotsData=Array.isArray(s)?s:[]; prenotazioni=Array.isArray(p)?p:[]; listaAttesa=Array.isArray(a)?a:[];
@@ -777,7 +777,7 @@ async function cancellaAttesa(id){
 async function cancella(id){
   chiudiModal("ov-canc");
   const res=await post({action:"cancella",idPrenotazione:id});
-  if(res.error){toast(res.error,"err");return;}
+  if(!res||!res.ok){toast((res&&res.error)||"Errore di connessione. Riprova.","err");return;}
   if(res.recreditata) toast("Prenotazione cancellata. Lezione riaccreditata.","ok");
   else toast("Prenotazione cancellata. Limite mensile raggiunto: lezione non riaccreditata.","err");
   cliente.lezioniRim=res.lezioniRimanenti;
@@ -819,7 +819,7 @@ async function inviaRinnovo(){
   chiudiModal("ov-rinnovo");
   const idPacchetto=document.getElementById("rinnovo-pkg-sel").value||"";
   const res=await post({action:"richiestaRinnovo",idPacchetto});
-  if(res.error){toast(res.error,"err");return;}
+  if(!res||!res.ok){toast((res&&res.error)||"Errore di connessione. Riprova.","err");return;}
   toast("Richiesta inviata! Ti contatteremo presto 💪","ok");
   // Nascondi il pannello dopo la richiesta
   document.getElementById("rinnovo-panel").classList.remove("visible");
