@@ -287,9 +287,8 @@
     <div class="regole-bar">
       <span class="regola-pill">📅 Lun–Ven · 8:30–19:00</span>
       <span class="regola-pill">👥 Max 3 per slot</span>
-      <span class="regola-pill">⏱️ Cancella entro 24h</span>
-      <span class="regola-pill">🔄 Assenza &gt;24h = recuperabile</span>
-      <span class="regola-pill">❌ &lt;24h = lezione persa</span>
+      <span class="regola-pill">🔄 Cancella ≥24h prima = sempre gratis</span>
+      <span class="regola-pill">🃏 &lt;24h: 1 jolly/mese, poi lezione persa</span>
     </div>
   </div>
 </div>
@@ -532,7 +531,7 @@ function renderPrenotazioni(){
       <div class="pre-data">${p.dataLabel}</div>
       <div class="pre-ora">🕐 ${p.oraInizio} – ${p.oraFine}</div>
     </div>
-    <button class="btn btn-d btn-sm" onclick="apriModalCanc('${p.id}','${p.dataLabel}','${p.oraInizio}')">Cancella</button>
+    <button class="btn btn-d btn-sm" onclick="apriModalCanc('${p.id}','${p.data}','${p.dataLabel}','${p.oraInizio}')">Cancella</button>
   </div>`).join("");
 }
 
@@ -725,20 +724,16 @@ async function prenotaRicorrente(data,ora,settimane){
   renderClientePill(); renderListaAttesa(); renderPrenotazioni(); renderCal();
   if(giornoSelezionato) selezionaGiorno(giornoSelezionato);
 }
-function apriModalCanc(id,dataLabel,ora){
-  // NB: 3 deve restare allineato con LIMITE_CANC_MESE lato backend (funzione cancellaPrenotazione in codice_gs.txt).
-  // Se in futuro cambia il limite li', va cambiato anche qui.
-  const LIMITE_CANC_MESE=3;
-  const oggi=new Date();
-  const cancMese=logList.filter(l=>{
-    if(l.tipo!=="Cancellazione")return false;
-    const d=new Date(String(l.data).replace(" ","T"));
-    return d.getFullYear()===oggi.getFullYear()&&d.getMonth()===oggi.getMonth();
-  }).length;
-  const verraRiaccreditata=cancMese<LIMITE_CANC_MESE;
-  const msg=verraRiaccreditata
-    ? `Cancelli il ${dataLabel} alle ${ora}? La lezione verrà riaccreditata al tuo pacchetto. Cancellazioni gratuite rimanenti dopo questa: ${LIMITE_CANC_MESE-cancMese-1}.`
-    : `Cancelli il ${dataLabel} alle ${ora}? Hai già raggiunto il limite di ${LIMITE_CANC_MESE} cancellazioni gratuite questo mese: la lezione NON verrà riaccreditata.`;
+function apriModalCanc(id,data,dataLabel,ora){
+  // NB: 24 deve restare allineato con CONFIG.ORE_CANCELLAZIONE lato backend
+  // (funzione _valutaCancellazione in codice_gs.txt). Se in futuro cambia la
+  // soglia lì, va cambiata anche qui.
+  const ORE_CANCELLAZIONE=24;
+  const oreAnticipo=(new Date(data+"T"+ora)-new Date())/3600000;
+  const tardiva=oreAnticipo<ORE_CANCELLAZIONE;
+  const msg=!tardiva
+    ? `Cancelli il ${dataLabel} alle ${ora}? Sei oltre le ${ORE_CANCELLAZIONE}h di anticipo: la lezione verrà sempre riaccreditata al tuo pacchetto.`
+    : `Cancelli il ${dataLabel} alle ${ora}? Sei sotto le ${ORE_CANCELLAZIONE}h di anticipo: la lezione verrà riaccreditata SOLO se hai ancora disponibile il tuo "jolly" mensile per le cancellazioni last-minute, altrimenti andrà persa. Confermi?`;
   document.getElementById("modal-canc-txt").textContent=msg;
   document.getElementById("btn-ok-canc").onclick=()=>cancella(id);
   apriModal("ov-canc");
