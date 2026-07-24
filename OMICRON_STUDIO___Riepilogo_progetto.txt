@@ -9,9 +9,29 @@ Backend: Google Apps Script (codice_gs.txt) — endpoint doGet() (chiamate JSONP
 Database: Google Sheets (fogli: Clienti, Prenotazioni, Pacchetti, Limiti, Log, Blocchi, Lista attesa, CodaWA)
 Calendario: Google Calendar
 Frontend: GitHub Pages — admin (admin.txt) e pagina cliente (cliente.txt)
-Notifiche: WhatsApp via WAAPI (waapi.app, $10/mese, instance #100071). Migrazione da Whapi completata e TESTATA in produzione il 15 luglio 2026 (vedi sezione "Completato" sotto). Whapi non è più usato da nessuna parte nel codice.
+Notifiche: WhatsApp via WAAPI (waapi.app, $10/mese, instance #100071) per i clienti. Migrazione da Whapi completata e TESTATA in produzione il 15 luglio 2026 (vedi sezione "Completato" sotto). Whapi non è più usato da nessuna parte nel codice. Notifiche ADMIN (nuova prenotazione, cancellazione, rinnovo, agenda del giorno dopo) passate da WhatsApp a Telegram il 24 luglio 2026 (vedi voce "Completato" più recente): CONFIG.ADMIN_WHATSAPP coincide col numero collegato a WAAPI, quindi WhatsApp trattava quei messaggi come "a se stesso" senza notificarli davvero.
 
 I tre file (codice_gs.txt, admin.txt, cliente.txt) sono caricati come riferimento statico nel progetto Claude e vanno ri-caricati manualmente dopo ogni modifica per restare sincronizzati. Anche questo file di riepilogo va aggiornato e ricaricato a fine sessione.
+
+
+Completato (24 luglio 2026) — Notifiche admin via Telegram (sostituiscono WhatsApp) + fix bug "reminder duplicato".
+
+  Parte 1 — Notifiche admin via Telegram.
+  Segnalazione di Fabrizio: le notifiche admin (nuova prenotazione, prenotazione ricorrente, cancellazione, richiesta rinnovo, agenda del giorno dopo) su WhatsApp non arrivavano più. Causa: CONFIG.ADMIN_WHATSAPP è lo stesso numero collegato all'istanza WAAPI usata per inviare i messaggi — WhatsApp trattava quindi questi messaggi come inviati "a se stesso" (self-chat), che non genera notifiche.
+  Fix: creato un bot Telegram (@BotFather) e aggiunta l'integrazione in Codice.js, riusando l'infrastruttura esistente (stessa coda CodaWA, stesso trigger drainCodaWA ogni minuto — nessun nuovo foglio/trigger):
+  - CONFIG: nuovi TELEGRAM_BOT_TOKEN (letto da Proprietà dello script, come già per WAAPI_TOKEN), TELEGRAM_CHAT_ID ("892572957", il chat ID Telegram di Fabrizio), TELEGRAM_URL (base URL API Telegram).
+  - Nuova funzione _tg(msg): accoda il messaggio su CodaWA con una nuova colonna G "Canale" = "telegram" (colonna assente/vuota = WhatsApp come prima, nessuna riga esistente da migrare).
+  - Nuova funzione _tgSend(chatId, msg): invio effettivo via API Telegram (sendMessage, parse_mode Markdown), chiamata solo dal drain in background come _waSend.
+  - drainCodaWA(): il loop ora legge la colonna G e instrada a _tgSend se "telegram", altrimenti a _waSend come sempre.
+  - Le 6 chiamate _wa(CONFIG.ADMIN_WHATSAPP, ...) (nuova prenotazione, prenotazione ricorrente, cancellazione, richiestaRinnovo, le 2 dell'agenda di domani in inviaReminder) convertite in _tg(...) — stesso testo dei messaggi, solo cambiato il canale. Nessuna chiamata _wa verso numeri di clienti toccata.
+  File modificato: solo Codice.js. Sintassi verificata con node --check. Nota per Fabrizio: TELEGRAM_BOT_TOKEN va inserito a mano nelle Proprietà dello script (non scriptato, valore sensibile) — senza quel valore _tg()/_tgSend() restituiscono silenziosamente senza fare nulla (stesso pattern fail-safe già usato per WAAPI_TOKEN/ADMIN_PASSWORD).
+
+  Parte 2 — Fix bug "reminder di lezione arrivato due volte" (segnalato da una cliente).
+  Causa individuata in drainCodaWA() (Codice.js): la coda invia un messaggio ogni 15s (raccomandazione WAAPI) fino a 24 per esecuzione. Nei giorni con più prenotazioni per il giorno dopo, inviaReminder() accoda tutti i reminder in un colpo solo (unico punto del codice che genera raffiche di molti messaggi insieme, a differenza delle altre notifiche che arrivano una alla volta) — quel batch può avvicinarsi/superare il limite di 6 minuti di esecuzione di Apps Script. Se lo script veniva interrotto proprio durante la chiamata HTTP di invio (prima di marcare la riga "Inviato"), il messaggio risultava comunque consegnato dal lato WAAPI ma la riga restava "In coda": il run successivo (1 minuto dopo) la rispediva, causando un secondo invio reale al cliente — pur restando una sola riga "Inviato" sul foglio (il doppio invio non è quindi visibile come riga duplicata).
+  Verificato con Fabrizio prima del fix: un solo trigger "inviaReminder" installato (escluso quindi il trigger duplicato come causa alternativa).
+  Fix: il loop di drainCodaWA() ora controlla il tempo trascorso dall'inizio dell'esecuzione e si ferma con margine di sicurezza (5 minuti su 6 disponibili) prima di processare la riga successiva, lasciando eventuali messaggi residui regolarmente "In coda" per il giro dopo invece di rischiare l'interruzione a metà invio.
+  File modificato: solo Codice.js (drainCodaWA). Sintassi verificata con node --check.
+  STATO: deploy fatto il 24/7/2026 (clasp push + clasp deploy sulla distribuzione esistente, stesso ID/URL usato da admin.html/cliente.html — nessuna nuova distribuzione creata). Verifica in produzione IMPOSTATA ma non ancora confermata: creata una routine cloud one-shot per domenica 26/7/2026 ore 19:15 Europe/Rome (dopo il trigger reminder delle 18:00, che quel giorno accoderà i reminder per lunedì 27/7 — il 25/7 è sabato, senza lezioni domenica non ci sarebbe stato nulla da controllare) che legge il foglio CodaWA via Google Drive e controlla duplicati per numero di telefono + stato delle righe. Routine: https://claude.ai/code/routines/trig_011unYVwJNZFxCRSC4qmCdKX — DA CONTROLLARE l'esito nella prossima sessione e aggiornare questa voce con STATO definitivo (nota: quel controllo esclude doppi accodamenti/code bloccate ma non può dimostrare al 100% l'assenza di doppia consegna WhatsApp nel caso limite descritto sopra — la conferma definitiva resta l'assenza di nuove segnalazioni dai clienti).
 
 
 Completato (23 luglio 2026) — Cambio di workflow: da Claude.ai (copia-incolla manuale) a Claude Code (cartella locale collegata a GitHub e Apps Script).
