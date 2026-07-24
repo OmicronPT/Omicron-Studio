@@ -1405,6 +1405,46 @@ function _calDelPrenotazione(eventId) {
   }
 }
 
+// Pulizia UNA TANTUM: rimuove dal Calendar gli eventi rimasti orfani da cancellazioni
+// passate (race condition in drainCodaCal tra uno stesso evento creato dopo che la
+// prenotazione era gia' stata cancellata, risolta il 24/7/2026 solo per il futuro).
+// Da lanciare A MANO una sola volta dall'editor Apps Script - non agganciata al
+// dispatcher doGet/doPost.
+function pulisciEventiCalendarOrfani() {
+  const sh   = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Prenotazioni");
+  const rows = sh.getDataRange().getValues();
+  const cal  = _getCalendar();
+  let controllate = 0, rimossi = 0, giaAssenti = 0, errori = 0;
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i][7] !== "Cancellata") continue;
+    const eventId = rows[i][9]; // colonna J
+    if (!eventId) continue;
+    controllate++;
+    try {
+      const event = cal.getEventById(eventId);
+      if (event) {
+        event.deleteEvent();
+        rimossi++;
+        Logger.log("Rimosso evento orfano: prenotazione " + rows[i][0] + " (" + rows[i][2] + ")");
+      } else {
+        giaAssenti++;
+      }
+    } catch(e) {
+      // getEventById a volte lancia un'eccezione invece di restituire null quando l'evento
+      // non esiste piu' (comportamento non documentato ma osservato in produzione) - va
+      // trattato come "gia' assente", non come un vero errore.
+      if (/does not exist|already been deleted/i.test(e.message)) {
+        giaAssenti++;
+      } else {
+        errori++;
+        Logger.log("Errore pulizia " + rows[i][0] + ": " + e.message);
+      }
+    }
+  }
+  Logger.log("Pulizia completata: " + controllate + " prenotazioni cancellate con eventId controllate, " + rimossi + " eventi orfani rimossi, " + giaAssenti + " gia' assenti (ok), " + errori + " errori.");
+  return { controllate, rimossi, giaAssenti, errori };
+}
+
 // Accoda la creazione dell'evento Calendar: l'evento vero e proprio viene creato
 // in background da drainCodaCal (trigger a tempo), cosi' prenotaSlot non aspetta
 // piu' la chiamata a CalendarApp.createEvent.
@@ -1462,13 +1502,21 @@ function drainCodaCal() {
       const idPrenotazione = rows[i][0];
 
       // Trova la prenotazione corrispondente nel foglio Prenotazioni
-      let pRiga = -1, statoAttuale = null;
+      let pRiga = -1;
       for (let j = 1; j < rowsPre.length; j++) {
-        if (rowsPre[j][0] === idPrenotazione) { pRiga = j + 1; statoAttuale = rowsPre[j][7]; break; }
+        if (rowsPre[j][0] === idPrenotazione) { pRiga = j + 1; break; }
       }
 
-      // Prenotazione non trovata o già cancellata (es. cancellata entro il minuto,
-      // prima che l'evento venisse creato) -> salta, nessun evento orfano.
+      // Stato riletto ORA (non dallo snapshot rowsPre preso a inizio funzione): se questo
+      // drain elabora molte righe in sequenza, una cancellazione può arrivare (da client o
+      // admin, esecuzione indipendente) DOPO lo snapshot iniziale ma PRIMA che si arrivi a
+      // processare questa riga -> con lo snapshot vecchio l'evento verrebbe creato comunque
+      // per una prenotazione già cancellata e resterebbe orfano per sempre (cancellaPrenotazione
+      // è già passata di lì una volta sola e non trova nulla da cancellare). La rilettura
+      // puntuale chiude quasi del tutto questa finestra di race.
+      const statoAttuale = pRiga === -1 ? null : shPre.getRange(pRiga, 8).getValue();
+
+      // Prenotazione non trovata o già cancellata -> salta, nessun evento orfano.
       if (pRiga === -1 || statoAttuale === "Cancellata") {
         sh.getRange(i + 1, 6).setValue("Saltata");
         continue;
