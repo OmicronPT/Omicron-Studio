@@ -10,6 +10,9 @@ const CONFIG = {
   WAAPI_INSTANCE_ID:    PropertiesService.getScriptProperties().getProperty("WAAPI_INSTANCE_ID") || "",  // letto dalle Proprieta dello script
   WAAPI_TOKEN:          PropertiesService.getScriptProperties().getProperty("WAAPI_TOKEN") || "",         // letto dalle Proprieta dello script
   WAAPI_URL:            "https://waapi.app/api/v1/instances/",    // base URL WAAPI (instanceId e azione vengono aggiunti in _waSend)
+  TELEGRAM_BOT_TOKEN:   PropertiesService.getScriptProperties().getProperty("TELEGRAM_BOT_TOKEN") || "",  // letto dalle Proprieta dello script - token del bot @BotFather
+  TELEGRAM_CHAT_ID:     "892572957",      // il tuo chat ID Telegram - qui arrivano le notifiche admin al posto di WhatsApp (self-chat non da' notifiche)
+  TELEGRAM_URL:         "https://api.telegram.org/bot",           // base URL Telegram (token e metodo aggiunti in _tgSend)
   ORE_REMINDER:         18,               // ora invio reminder giornaliero
   SOGLIA_AVVISO:        2,                // avvisa quando rimangono N lezioni
   MAX_CONTEMPORANEI:    3,                // max persone per slot
@@ -444,7 +447,7 @@ function prenotaSlot(token, data, oraInizio, silent, ctx) {
     _wa(cliente.telefono, `✅ *${CONFIG.STUDIO_NAME}*\nCiao ${cliente.nome}! Prenotazione confermata.\n📅 ${dl} ore ${oraInizio}\nLezioni rimanenti: ${nuovoRim}`);
     if (nuovoRim <= CONFIG.SOGLIA_AVVISO && nuovoRim > 0)
       _wa(cliente.telefono, `⚠️ *${CONFIG.STUDIO_NAME}*\nCiao ${cliente.nome}, rimangono solo *${nuovoRim} lezioni*. Contattaci!`);
-    _wa(CONFIG.ADMIN_WHATSAPP, `🔔 *Nuova prenotazione*\n👤 ${cliente.nome} ${cliente.cognome}\n📅 ${dl} ore ${oraInizio}\n💪 Lezioni rimanenti: ${nuovoRim}`);
+    _tg(`🔔 *Nuova prenotazione*\n👤 ${cliente.nome} ${cliente.cognome}\n📅 ${dl} ore ${oraInizio}\n💪 Lezioni rimanenti: ${nuovoRim}`);
   }
 
   // In modalità ctx (ricorrente): aggiorna lo stato condiviso in memoria
@@ -520,7 +523,7 @@ function prenotaRicorrente(token, data, oraInizio, settimane) {
   if (lezioniRim !== null && lezioniRim <= CONFIG.SOGLIA_AVVISO && lezioniRim > 0)
     _wa(cliente.telefono, `⚠️ *${CONFIG.STUDIO_NAME}*\nCiao ${cliente.nome}, rimangono solo *${lezioniRim} lezioni*. Contattaci!`);
 
-  _wa(CONFIG.ADMIN_WHATSAPP, `🔔 *Nuova prenotazione ricorrente*\n👤 ${cliente.nome} ${cliente.cognome}\n${elenco}\n💪 Lezioni rimanenti: ${lezioniRim}`);
+  _tg(`🔔 *Nuova prenotazione ricorrente*\n👤 ${cliente.nome} ${cliente.cognome}\n${elenco}\n💪 Lezioni rimanenti: ${lezioniRim}`);
 
   return { ok: true, prenotate: prenotate, saltate: saltate, lezioniRimanenti: lezioniRim };
 }
@@ -638,7 +641,7 @@ function cancellaPrenotazione(token, idPrenotazione) {
   }
 
   // Notifica admin
-  _wa(CONFIG.ADMIN_WHATSAPP, `⚠️ *Cancellazione*\n👤 ${cliente.nome} ${cliente.cognome}\n📅 ${dlCanc} ore ${oraPre}\n${esito.lezioneRecuperata ? 'Lezione riaccreditata ✅'+(esito.jollyUsato?' (jolly usato)':'') : 'Lezione persa (cancellazione tardiva, jolly già usato) ❌'}`);
+  _tg(`⚠️ *Cancellazione*\n👤 ${cliente.nome} ${cliente.cognome}\n📅 ${dlCanc} ore ${oraPre}\n${esito.lezioneRecuperata ? 'Lezione riaccreditata ✅'+(esito.jollyUsato?' (jolly usato)':'') : 'Lezione persa (cancellazione tardiva, jolly già usato) ❌'}`);
 
   // Notifica lista d'attesa se c'è qualcuno in coda
   _notificaListaAttesa(dataPre, oraPre);
@@ -1286,7 +1289,7 @@ function richiestaRinnovo(token, idPacchetto) {
   }
 
   // Notifica admin WhatsApp
-  _wa(CONFIG.ADMIN_WHATSAPP,
+  _tg(
     `🔄 *Richiesta rinnovo*
 👤 ${cliente.nome} ${cliente.cognome}
 📦 Pacchetto richiesto: *${nomePacchetto}*
@@ -1888,9 +1891,9 @@ function inviaReminder() {
         const c = clienti.find(x=>x.id===p.idCliente);
         return `🕐 ${p.oraInizio} — ${c ? c.nome+" "+c.cognome : p.nomeCliente}`;
       }).join("\n");
-    _wa(CONFIG.ADMIN_WHATSAPP, `📋 *Agenda di domani — ${domaniLabel}*\n\n${righe}\n\nTotale: ${predomani.length} sessioni`);
+    _tg(`📋 *Agenda di domani — ${domaniLabel}*\n\n${righe}\n\nTotale: ${predomani.length} sessioni`);
   } else {
-    _wa(CONFIG.ADMIN_WHATSAPP, `📋 *Agenda di domani — ${domaniLabel}*\n\nNessuna sessione in programma.`);
+    _tg(`📋 *Agenda di domani — ${domaniLabel}*\n\nNessuna sessione in programma.`);
   }
 
   // Auguri di compleanno automatici: confronta giorno/mese di dataNascita con oggi.
@@ -1956,6 +1959,18 @@ function _wa(numero, msg) {
   }
 }
 
+// Notifica admin via Telegram (sostituisce _wa(CONFIG.ADMIN_WHATSAPP,...): quel numero coincide
+// con l'istanza WAAPI, quindi WhatsApp trattava il messaggio come "a se stesso" e non notificava.
+// Stessa coda/trigger di WhatsApp (colonna G "Canale" = "telegram"), nessun nuovo foglio/trigger.
+function _tg(msg) {
+  if (!CONFIG.TELEGRAM_BOT_TOKEN) return;
+  try {
+    getFogliCodaWA().appendRow([new Date(), CONFIG.TELEGRAM_CHAT_ID, msg, "In coda", 0, "", "telegram"]);
+  } catch(e) {
+    Logger.log("TG enqueue error: " + e.message);
+  }
+}
+
 // Foglio coda WhatsApp (creato al volo se non esiste)
 function getFogliCodaWA() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -1989,12 +2004,37 @@ function _waSend(numero, msg) {
   }
 }
 
+// Invio effettivo del messaggio Telegram (chiamato SOLO dal drain in background, stesso schema di _waSend)
+function _tgSend(chatId, msg) {
+  if (!CONFIG.TELEGRAM_BOT_TOKEN) return false;
+  try {
+    const url = CONFIG.TELEGRAM_URL + CONFIG.TELEGRAM_BOT_TOKEN + "/sendMessage";
+    const payload = JSON.stringify({ chat_id: String(chatId), text: msg, parse_mode: "Markdown" });
+    const resp = UrlFetchApp.fetch(url, {
+      method: "post",
+      contentType: "application/json",
+      payload: payload,
+      muteHttpExceptions: true
+    });
+    const code = resp.getResponseCode();
+    return code >= 200 && code < 300;
+  } catch(e) {
+    Logger.log("TG send error: " + e.message);
+    return false;
+  }
+}
+
 // Svuota la coda WhatsApp: spedisce i messaggi "In coda".
 // Eseguito da un trigger a tempo (ogni minuto) -> fuori dal percorso critico.
 function drainCodaWA() {
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(5000)) return; // un altro drain e' gia' in corso
   try {
+    const inizio = Date.now();
+    const TEMPO_MASSIMO_MS = 5 * 60 * 1000; // margine di sicurezza sotto il limite di 6 min di Apps Script:
+    // con giornate cariche di reminder (tutti accodati insieme) 24 msg * 15s di pausa arriva a ridosso del limite;
+    // se lo script viene interrotto a meta' di un invio la riga resta "In coda" e viene rispedita al giro dopo
+    // (messaggio duplicato lato cliente pur restando una sola riga "Inviato" sul foglio) - uscire prima evita l'interruzione a meta'.
     const sh = getFogliCodaWA();
     const rows = sh.getDataRange().getValues();
     const MAX_PER_RUN = 24; // con la pausa di 15s tra invii (richiesta da WAAPI), 24 msg/run restano dentro il limite di 6 min di Apps Script
@@ -2002,7 +2042,9 @@ function drainCodaWA() {
     let processate = 0;
     for (let i = 1; i < rows.length && processate < MAX_PER_RUN; i++) {
       if (rows[i][3] !== "In coda") continue;
-      const ok = _waSend(rows[i][1], rows[i][2]);
+      if (Date.now() - inizio > TEMPO_MASSIMO_MS) break; // lascia il resto in coda al prossimo giro invece di rischiare un kill a meta' invio
+      const isTelegram = rows[i][6] === "telegram"; // colonna G "Canale" (assente/vuota = WhatsApp, invariato)
+      const ok = isTelegram ? _tgSend(rows[i][1], rows[i][2]) : _waSend(rows[i][1], rows[i][2]);
       processate++;
       if (ok) {
         sh.getRange(i + 1, 4).setValue("Inviato");
