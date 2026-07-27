@@ -1987,6 +1987,26 @@ function controllaScadenze() {
   });
 }
 
+// Backup mensile: duplica l'intero Google Sheet in una cartella Drive dedicata.
+// Nessuna pulizia automatica dei backup vecchi (volume di dati contenuto per uno studio di
+// personal training) — se in futuro dovesse crescere troppo, valutare di cancellare a mano
+// le copie più vecchie di N mesi dalla cartella "Omicron Studio - Backup" su Drive.
+function backupMensile() {
+  const tz = Session.getScriptTimeZone();
+  const nomeBackup = "Omicron Studio - Backup " + Utilities.formatDate(new Date(), tz, "yyyy-MM-dd");
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const rootName = "Omicron Studio - Backup";
+    const rootFolders = DriveApp.getFoldersByName(rootName);
+    const folder = rootFolders.hasNext() ? rootFolders.next() : DriveApp.createFolder(rootName);
+    DriveApp.getFileById(ss.getId()).makeCopy(nomeBackup, folder);
+    _tg(`💾 *${CONFIG.STUDIO_NAME}*\nBackup mensile completato: "${nomeBackup}" salvato su Drive.`);
+  } catch(e) {
+    Logger.log("Errore backup mensile: " + e.message);
+    _tg(`⚠️ *${CONFIG.STUDIO_NAME}*\nBackup mensile FALLITO: ${e.message}`);
+  }
+}
+
 function setupTriggers() {
   ScriptApp.getProjectTriggers().forEach(t=>ScriptApp.deleteTrigger(t));
   ScriptApp.newTrigger("inviaReminder").timeBased().everyDays(1).atHour(CONFIG.ORE_REMINDER).create();
@@ -1994,7 +2014,8 @@ function setupTriggers() {
   ScriptApp.newTrigger("controllaScadenzeListaAttesa").timeBased().everyMinutes(10).create();
   ScriptApp.newTrigger("drainCodaWA").timeBased().everyMinutes(1).create();   // <-- NUOVA
   ScriptApp.newTrigger("drainCodaCal").timeBased().everyMinutes(1).create(); // <-- aggiunto 15/7: mancava, esisteva solo come trigger creato a mano
-  Logger.log("Trigger attivati! Reminder giornaliero alle " + CONFIG.ORE_REMINDER + ":00, controllo scadenze ogni lunedì, lista attesa ogni 10 minuti.");
+  ScriptApp.newTrigger("backupMensile").timeBased().onMonthDay(1).atHour(3).create(); // <-- aggiunto 27/7: backup mensile su Drive
+  Logger.log("Trigger attivati! Reminder giornaliero alle " + CONFIG.ORE_REMINDER + ":00, controllo scadenze ogni lunedì, lista attesa ogni 10 minuti, backup il giorno 1 di ogni mese.");
 }
 
 // ──────────────────────────────────────────────────────────
