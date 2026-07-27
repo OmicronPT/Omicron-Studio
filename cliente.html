@@ -800,7 +800,7 @@ function renderRinnovo(){
 
   // Popola select con i pacchetti disponibili
   sel.innerHTML=`<option value="">— Stesso pacchetto (${cliente.pacchetto}) —</option>`+
-    pkgList.map(p=>`<option value="${p.id}">${p.nome} — €${p.prezzo}${p.descrizione?" · "+p.descrizione:""}</option>`).join("");
+    pkgList.map(p=>`<option value="${p.id}">${p.nome}${p.descrizione?" · "+p.descrizione:""}</option>`).join("");
 }
 
 function apriModalRinnovo(){
