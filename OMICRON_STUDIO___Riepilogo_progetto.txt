@@ -20,7 +20,7 @@ Completato (27 luglio 2026) — Priorità media: backup mensile schedulato dei d
   setupTriggers(): aggiunta la riga per il trigger mensile (giorno 1 del mese, ore 3:00) — per documentazione, dato che setupTriggers() non è comunque eseguibile da codice per la nota mancanza dello scope script.scriptapp (vedi "Principi e lezioni chiave" più sotto): il trigger reale va installato a mano dall'editor Apps Script, stesso iter già seguito per drainCodaWA/drainCodaCal.
   File modificato: solo Codice.js (nuova backupMensile, setupTriggers). Sintassi verificata con node --check.
   TESTATO IN PRODUZIONE E CONFERMATO FUNZIONANTE da Fabrizio il 27 luglio 2026: funzione eseguita a mano dall'editor (nessun dato cliente toccato, operazione sicura da eseguire direttamente in produzione), verificato via Google Drive che la cartella "Omicron Studio - Backup" e il file "Omicron Studio - Backup 2026-07-27" (copia completa di tutti i tab: Clienti, Prenotazioni, CodaCal, CodaWA, ecc.) sono stati creati correttamente.
-  STATO: manca solo l'installazione manuale del trigger mensile da parte di Fabrizio (Attivazioni → Aggiungi trigger → backupMensile → Timer mensile → giorno 1 → 2-3 di notte) per renderlo automatico da qui in avanti; il primo backup reale è comunque già stato creato con l'esecuzione manuale di test.
+  STATO: trigger mensile installato a mano da Fabrizio dall'editor Apps Script (Attivatori → Aggiungi trigger → backupMensile → basato sul tempo → mensile, giorno 1, notte). Funzionalità completa e autonoma da qui in avanti.
   Deploy: clasp push effettuato (funzione trigger-only, non serve nuova versione del deployment).
 
 Completato (27 luglio 2026) — Priorità media, punto 1 del backlog (14/7): auto-transizione stato cliente a "Scaduto".
