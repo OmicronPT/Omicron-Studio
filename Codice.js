@@ -378,89 +378,101 @@ function prenotaSlot(token, data, oraInizio, silent, ctx) {
   if (cliente.lezioniRim <= 0)    return { error: "Nessuna lezione rimanente." };
   if (cliente.dataScad && new Date(cliente.dataScad) < new Date()) return { error: "Pacchetto scaduto." };
 
-  const prenotazioni = ctx ? ctx.prenotazioni : _tuttePrenotazioni();
-  const blocchi      = ctx ? ctx.blocchi : _tuttiBlocchi();
+  // Lock intorno al blocco "controlla capienza -> scrivi prenotazione": senza,
+  // due richieste concorrenti sull'ultimo posto libero di uno slot potrebbero
+  // leggere entrambe "posto disponibile" prima che una delle due scriva,
+  // superando la capienza massima (overbooking). Stesso pattern LockService
+  // già usato in drainCodaCal/drainCodaWA, qui applicato al percorso di scrittura
+  // principale invece che solo alle code in background.
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) return { error: "Il sistema è occupato, riprova tra qualche secondo." };
+  try {
+    const prenotazioni = ctx ? ctx.prenotazioni : _tuttePrenotazioni();
+    const blocchi      = ctx ? ctx.blocchi : _tuttiBlocchi();
 
-  if (_isBloccat(data, oraInizio, blocchi)) return { error: "Orario non disponibile." };
+    if (_isBloccat(data, oraInizio, blocchi)) return { error: "Orario non disponibile." };
 
-  // Controllo limite settimanale in base al pacchetto
-  const pacchetti = ctx ? ctx.pacchetti : getPacchetti();
-  const pkg = pacchetti.find(p => p.nome === cliente.pacchetto);
-  const limiteSettimana = pkg ? (parseInt(pkg.lezioniSettimana) > 0 ? parseInt(pkg.lezioniSettimana) : 3) : 3;
+    // Controllo limite settimanale in base al pacchetto
+    const pacchetti = ctx ? ctx.pacchetti : getPacchetti();
+    const pkg = pacchetti.find(p => p.nome === cliente.pacchetto);
+    const limiteSettimana = pkg ? (parseInt(pkg.lezioniSettimana) > 0 ? parseInt(pkg.lezioniSettimana) : 3) : 3;
 
-  const dataSlot = new Date(data + "T12:00:00");
-  const dow = (dataSlot.getDay() + 6) % 7; // lun=0, dom=6
-  const lunedi = new Date(dataSlot); lunedi.setDate(dataSlot.getDate() - dow); lunedi.setHours(0,0,0,0);
-  const domenica = new Date(lunedi); domenica.setDate(lunedi.getDate() + 6); domenica.setHours(23,59,59,999);
-  const preSettimana = prenotazioni.filter(p => {
-    if (p.idCliente !== cliente.id || p.stato === "Cancellata") return false;
-    const ds = new Date(p.data + "T12:00:00");
-    return ds >= lunedi && ds <= domenica;
-  });
-  if (preSettimana.length >= limiteSettimana) {
-    return { error: `Hai raggiunto il limite di ${limiteSettimana} prenotazioni settimanali per il pacchetto ${cliente.pacchetto}.` };
-  }
-
-  const count = _conteggioSovrapposti(data, oraInizio, prenotazioni);
-  const dataObjSlot = new Date(data + "T12:00:00");
-  const limitiSlot = ctx ? ctx.limiti : getLimitiAttivi();
-  const capienzaSlot = getCapienzaSlot(dataObjSlot, oraInizio, limitiSlot);
-  if (count >= capienzaSlot) return { error: "Slot al completo." };
-
-  // Già prenotato?
-  const già = prenotazioni.find(p =>
-    p.idCliente === cliente.id && p.data === data &&
-    p.oraInizio === oraInizio && p.stato !== "Cancellata"
-  );
-  if (già) return { error: "Hai già prenotato questo slot." };
-
-  const id     = "PRE" + Date.now();
-  const tz     = Session.getScriptTimeZone();
-  const oraFine= _minToOre(_oreToMin(oraInizio) + CONFIG.DURATA_SESSION_MIN);
-  const now    = Utilities.formatDate(new Date(), tz, "yyyy-MM-dd HH:mm");
-
-  // La creazione dell'evento Calendar non è più sincrona: si scrive subito la riga
-  // (colonna 10 = eventId, vuota per ora) e si accoda la creazione su CodaCal.
-  // drainCodaCal() (trigger a tempo) creerà l'evento e scriverà l'eventId in J entro ~1 minuto.
-  ss.getSheetByName("Prenotazioni").appendRow([
-    id, cliente.id, cliente.nome+" "+cliente.cognome,
-    data, oraInizio, oraFine, now, "Confermata", "", ""
-  ]);
-
-  _calEnqueue(id, cliente.nome+" "+cliente.cognome, data, oraInizio, oraFine);
-
-  const tz2 = Session.getScriptTimeZone();
-  _logEvento(cliente.id, cliente.nome+" "+cliente.cognome, "Prenotazione",
-    "Prenotazione confermata per il " + _formatDataIT(new Date(data+"T12:00:00"), "EEEE d MMMM") + " ore " + oraInizio);
-
-  // Aggiorna la lista d'attesa se questo slot era anche in attesa (vedi _gestisciPrenotazioneListaAttesa)
-  const slotOraPieno = (count + 1) >= capienzaSlot;
-  _gestisciPrenotazioneListaAttesa(cliente.id, data, oraInizio, slotOraPieno);
-
-  // Scala lezione
-  const nuovoRim = cliente.lezioniRim - 1;
-  ss.getSheetByName("Clienti").getRange(cliente._riga, 8).setValue(nuovoRim);
-
-  // WhatsApp (soppresso quando chiamato in modalità silent, es. ricorrente)
-  if (!silent) {
-    const dl = _formatDataIT(new Date(data+"T12:00:00"), "EEEE d MMMM");
-    _wa(cliente.telefono, `✅ *${CONFIG.STUDIO_NAME}*\nCiao ${cliente.nome}! Prenotazione confermata.\n📅 ${dl} ore ${oraInizio}\nLezioni rimanenti: ${nuovoRim}`);
-    if (nuovoRim <= CONFIG.SOGLIA_AVVISO && nuovoRim > 0)
-      _wa(cliente.telefono, `⚠️ *${CONFIG.STUDIO_NAME}*\nCiao ${cliente.nome}, rimangono solo *${nuovoRim} lezioni*. Contattaci!`);
-    _tg(`🔔 *Nuova prenotazione*\n👤 ${cliente.nome} ${cliente.cognome}\n📅 ${dl} ore ${oraInizio}\n💪 Lezioni rimanenti: ${nuovoRim}`);
-  }
-
-  // In modalità ctx (ricorrente): aggiorna lo stato condiviso in memoria
-  // per rendere corrette le iterazioni successive
-  if (ctx) {
-    cliente.lezioniRim = nuovoRim;
-    ctx.prenotazioni.push({
-      id: id, idCliente: cliente.id, nomeCliente: cliente.nome + " " + cliente.cognome,
-      data: data, oraInizio: oraInizio, oraFine: oraFine, stato: "Confermata", _riga: null
+    const dataSlot = new Date(data + "T12:00:00");
+    const dow = (dataSlot.getDay() + 6) % 7; // lun=0, dom=6
+    const lunedi = new Date(dataSlot); lunedi.setDate(dataSlot.getDate() - dow); lunedi.setHours(0,0,0,0);
+    const domenica = new Date(lunedi); domenica.setDate(lunedi.getDate() + 6); domenica.setHours(23,59,59,999);
+    const preSettimana = prenotazioni.filter(p => {
+      if (p.idCliente !== cliente.id || p.stato === "Cancellata") return false;
+      const ds = new Date(p.data + "T12:00:00");
+      return ds >= lunedi && ds <= domenica;
     });
-  }
+    if (preSettimana.length >= limiteSettimana) {
+      return { error: `Hai raggiunto il limite di ${limiteSettimana} prenotazioni settimanali per il pacchetto ${cliente.pacchetto}.` };
+    }
 
-  return { ok: true, idPrenotazione: id, lezioniRimanenti: nuovoRim };
+    const count = _conteggioSovrapposti(data, oraInizio, prenotazioni);
+    const dataObjSlot = new Date(data + "T12:00:00");
+    const limitiSlot = ctx ? ctx.limiti : getLimitiAttivi();
+    const capienzaSlot = getCapienzaSlot(dataObjSlot, oraInizio, limitiSlot);
+    if (count >= capienzaSlot) return { error: "Slot al completo." };
+
+    // Già prenotato?
+    const già = prenotazioni.find(p =>
+      p.idCliente === cliente.id && p.data === data &&
+      p.oraInizio === oraInizio && p.stato !== "Cancellata"
+    );
+    if (già) return { error: "Hai già prenotato questo slot." };
+
+    const id     = "PRE" + Date.now();
+    const tz     = Session.getScriptTimeZone();
+    const oraFine= _minToOre(_oreToMin(oraInizio) + CONFIG.DURATA_SESSION_MIN);
+    const now    = Utilities.formatDate(new Date(), tz, "yyyy-MM-dd HH:mm");
+
+    // La creazione dell'evento Calendar non è più sincrona: si scrive subito la riga
+    // (colonna 10 = eventId, vuota per ora) e si accoda la creazione su CodaCal.
+    // drainCodaCal() (trigger a tempo) creerà l'evento e scriverà l'eventId in J entro ~1 minuto.
+    ss.getSheetByName("Prenotazioni").appendRow([
+      id, cliente.id, cliente.nome+" "+cliente.cognome,
+      data, oraInizio, oraFine, now, "Confermata", "", ""
+    ]);
+
+    _calEnqueue(id, cliente.nome+" "+cliente.cognome, data, oraInizio, oraFine);
+
+    const tz2 = Session.getScriptTimeZone();
+    _logEvento(cliente.id, cliente.nome+" "+cliente.cognome, "Prenotazione",
+      "Prenotazione confermata per il " + _formatDataIT(new Date(data+"T12:00:00"), "EEEE d MMMM") + " ore " + oraInizio);
+
+    // Aggiorna la lista d'attesa se questo slot era anche in attesa (vedi _gestisciPrenotazioneListaAttesa)
+    const slotOraPieno = (count + 1) >= capienzaSlot;
+    _gestisciPrenotazioneListaAttesa(cliente.id, data, oraInizio, slotOraPieno);
+
+    // Scala lezione
+    const nuovoRim = cliente.lezioniRim - 1;
+    ss.getSheetByName("Clienti").getRange(cliente._riga, 8).setValue(nuovoRim);
+
+    // WhatsApp (soppresso quando chiamato in modalità silent, es. ricorrente)
+    if (!silent) {
+      const dl = _formatDataIT(new Date(data+"T12:00:00"), "EEEE d MMMM");
+      _wa(cliente.telefono, `✅ *${CONFIG.STUDIO_NAME}*\nCiao ${cliente.nome}! Prenotazione confermata.\n📅 ${dl} ore ${oraInizio}\nLezioni rimanenti: ${nuovoRim}`);
+      if (nuovoRim <= CONFIG.SOGLIA_AVVISO && nuovoRim > 0)
+        _wa(cliente.telefono, `⚠️ *${CONFIG.STUDIO_NAME}*\nCiao ${cliente.nome}, rimangono solo *${nuovoRim} lezioni*. Contattaci!`);
+      _tg(`🔔 *Nuova prenotazione*\n👤 ${cliente.nome} ${cliente.cognome}\n📅 ${dl} ore ${oraInizio}\n💪 Lezioni rimanenti: ${nuovoRim}`);
+    }
+
+    // In modalità ctx (ricorrente): aggiorna lo stato condiviso in memoria
+    // per rendere corrette le iterazioni successive
+    if (ctx) {
+      cliente.lezioniRim = nuovoRim;
+      ctx.prenotazioni.push({
+        id: id, idCliente: cliente.id, nomeCliente: cliente.nome + " " + cliente.cognome,
+        data: data, oraInizio: oraInizio, oraFine: oraFine, stato: "Confermata", _riga: null
+      });
+    }
+
+    return { ok: true, idPrenotazione: id, lezioniRimanenti: nuovoRim };
+  } finally {
+    lock.releaseLock();
+  }
 }
 function prenotaRicorrente(token, data, oraInizio, settimane) {
   settimane = parseInt(settimane) || 1;
@@ -582,71 +594,81 @@ function cancellaPrenotazione(token, idPrenotazione) {
   const cliente = getClienteByToken(token);
   if (cliente.error) return cliente;
 
-  const shPre = ss.getSheetByName("Prenotazioni");
-  const rows  = shPre.getDataRange().getValues();
-  let pRiga=-1, p=null;
-  for (let i=1; i<rows.length; i++) {
-    if (rows[i][0]===idPrenotazione && rows[i][1]===cliente.id) { pRiga=i+1; p=rows[i]; break; }
+  // Lock intorno a lettura-stato+scrittura: senza, due cancellazioni concorrenti
+  // sulla stessa prenotazione (doppio tap, o client+admin insieme) potrebbero
+  // leggere entrambe "Confermata" prima che una delle due scriva "Cancellata",
+  // causando un doppio riaccredito della lezione per una sola cancellazione reale.
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) return { error: "Il sistema è occupato, riprova tra qualche secondo." };
+  try {
+    const shPre = ss.getSheetByName("Prenotazioni");
+    const rows  = shPre.getDataRange().getValues();
+    let pRiga=-1, p=null;
+    for (let i=1; i<rows.length; i++) {
+      if (rows[i][0]===idPrenotazione && rows[i][1]===cliente.id) { pRiga=i+1; p=rows[i]; break; }
+    }
+    if (!p)                  return { error: "Prenotazione non trovata." };
+    if (p[7]==="Cancellata") return { error: "Già cancellata." };
+
+    // Normalizza data/ora: Google Sheets a volte auto-converte queste celle in
+    // oggetti Data/Ora anche se scritte come testo, producendo date/orari sbagliati
+    // nei messaggi WhatsApp (o addirittura errori nei calcoli) se usate cosi' come sono.
+    const dataPre = _valStr(p[3], "yyyy-MM-dd");
+    const oraPre  = _valStr(p[4], "HH:mm");
+
+    // Guardia di sicurezza: non si può cancellare una lezione già passata (prima non
+    // c'era nessun controllo su questo, dato che il vecchio blocco rigido delle 24h
+    // copriva implicitamente anche questo caso; ora che quel blocco è stato rimosso
+    // serve un controllo esplicito).
+    if (new Date(dataPre+"T"+oraPre) < new Date())
+      return { error: "Non puoi cancellare una lezione già passata." };
+
+    // Policy "preavviso + jolly" (vedi _valutaCancellazione). Sostituisce sia il
+    // vecchio blocco rigido sotto le 24h, sia il vecchio limite di 3 cancellazioni
+    // gratuite al mese.
+    const esito = _valutaCancellazione(cliente.id, cliente.dataInizio, dataPre, oraPre, rows);
+
+    // Cancella prenotazione e registra la data/ora reale di cancellazione (colonna I)
+    const oggi = new Date();
+    const oraCancellazione = Utilities.formatDate(oggi, Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm");
+    shPre.getRange(pRiga, 8).setValue("Cancellata");
+    shPre.getRange(pRiga, 9).setValue(oraCancellazione);
+    if (esito.jollyUsato) shPre.getRange(pRiga, 11).setValue(true); // colonna K = Jolly Usato
+
+    // Rimuovi dal calendario Google
+    _calDelPrenotazione(p[9]||null); // colonna 10 = eventId (se presente)
+
+    // Log
+    let descrLog = "Prenotazione del " + _formatDataIT(new Date(dataPre+"T12:00:00"), "EEEE d MMMM") + " ore " + oraPre;
+    if (esito.jollyUsato)            descrLog += " — lezione riaccreditata (jolly cancellazione tardiva usato)";
+    else if (esito.lezioneRecuperata) descrLog += " — lezione riaccreditata";
+    else                              descrLog += " — lezione persa (cancellazione tardiva, jolly già usato questo ciclo)";
+    _logEvento(cliente.id, cliente.nome+" "+cliente.cognome, "Cancellazione", descrLog);
+
+    if (esito.lezioneRecuperata) {
+      ss.getSheetByName("Clienti").getRange(cliente._riga, 8).setValue(cliente.lezioniRim + 1);
+    }
+
+    const dlCanc = _formatDataIT(new Date(dataPre+"T12:00:00"), "d MMMM");
+
+    if (esito.jollyUsato) {
+      _wa(cliente.telefono, `❌ *${CONFIG.STUDIO_NAME}*\nPrenotazione del ${dlCanc} alle ${oraPre} cancellata.\nLezione riaccreditata. ✅\n⚠️ Hai usato il tuo "jolly" per le cancellazioni sotto le ${CONFIG.ORE_CANCELLAZIONE}h: non sarà di nuovo disponibile per 30 giorni.`);
+    } else if (esito.lezioneRecuperata) {
+      _wa(cliente.telefono, `❌ *${CONFIG.STUDIO_NAME}*\nPrenotazione del ${dlCanc} alle ${oraPre} cancellata.\nLezione riaccreditata. ✅`);
+    } else {
+      _wa(cliente.telefono, `❌ *${CONFIG.STUDIO_NAME}*\nPrenotazione del ${dlCanc} alle ${oraPre} cancellata.\n⚠️ Cancellazione a meno di ${CONFIG.ORE_CANCELLAZIONE}h dalla lezione e hai già usato il "jolly" di questo mese — la lezione non viene riaccreditata.`);
+    }
+
+    // Notifica admin
+    _tg(`⚠️ *Cancellazione*\n👤 ${cliente.nome} ${cliente.cognome}\n📅 ${dlCanc} ore ${oraPre}\n${esito.lezioneRecuperata ? 'Lezione riaccreditata ✅'+(esito.jollyUsato?' (jolly usato)':'') : 'Lezione persa (cancellazione tardiva, jolly già usato) ❌'}`);
+
+    // Notifica lista d'attesa se c'è qualcuno in coda
+    _notificaListaAttesa(dataPre, oraPre);
+
+    return { ok: true, recreditata: esito.lezioneRecuperata, lezioniRimanenti: esito.lezioneRecuperata ? cliente.lezioniRim+1 : cliente.lezioniRim };
+  } finally {
+    lock.releaseLock();
   }
-  if (!p)                  return { error: "Prenotazione non trovata." };
-  if (p[7]==="Cancellata") return { error: "Già cancellata." };
-
-  // Normalizza data/ora: Google Sheets a volte auto-converte queste celle in
-  // oggetti Data/Ora anche se scritte come testo, producendo date/orari sbagliati
-  // nei messaggi WhatsApp (o addirittura errori nei calcoli) se usate cosi' come sono.
-  const dataPre = _valStr(p[3], "yyyy-MM-dd");
-  const oraPre  = _valStr(p[4], "HH:mm");
-
-  // Guardia di sicurezza: non si può cancellare una lezione già passata (prima non
-  // c'era nessun controllo su questo, dato che il vecchio blocco rigido delle 24h
-  // copriva implicitamente anche questo caso; ora che quel blocco è stato rimosso
-  // serve un controllo esplicito).
-  if (new Date(dataPre+"T"+oraPre) < new Date())
-    return { error: "Non puoi cancellare una lezione già passata." };
-
-  // Policy "preavviso + jolly" (vedi _valutaCancellazione). Sostituisce sia il
-  // vecchio blocco rigido sotto le 24h, sia il vecchio limite di 3 cancellazioni
-  // gratuite al mese.
-  const esito = _valutaCancellazione(cliente.id, cliente.dataInizio, dataPre, oraPre, rows);
-
-  // Cancella prenotazione e registra la data/ora reale di cancellazione (colonna I)
-  const oggi = new Date();
-  const oraCancellazione = Utilities.formatDate(oggi, Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm");
-  shPre.getRange(pRiga, 8).setValue("Cancellata");
-  shPre.getRange(pRiga, 9).setValue(oraCancellazione);
-  if (esito.jollyUsato) shPre.getRange(pRiga, 11).setValue(true); // colonna K = Jolly Usato
-
-  // Rimuovi dal calendario Google
-  _calDelPrenotazione(p[9]||null); // colonna 10 = eventId (se presente)
-
-  // Log
-  let descrLog = "Prenotazione del " + _formatDataIT(new Date(dataPre+"T12:00:00"), "EEEE d MMMM") + " ore " + oraPre;
-  if (esito.jollyUsato)            descrLog += " — lezione riaccreditata (jolly cancellazione tardiva usato)";
-  else if (esito.lezioneRecuperata) descrLog += " — lezione riaccreditata";
-  else                              descrLog += " — lezione persa (cancellazione tardiva, jolly già usato questo ciclo)";
-  _logEvento(cliente.id, cliente.nome+" "+cliente.cognome, "Cancellazione", descrLog);
-
-  if (esito.lezioneRecuperata) {
-    ss.getSheetByName("Clienti").getRange(cliente._riga, 8).setValue(cliente.lezioniRim + 1);
-  }
-
-  const dlCanc = _formatDataIT(new Date(dataPre+"T12:00:00"), "d MMMM");
-
-  if (esito.jollyUsato) {
-    _wa(cliente.telefono, `❌ *${CONFIG.STUDIO_NAME}*\nPrenotazione del ${dlCanc} alle ${oraPre} cancellata.\nLezione riaccreditata. ✅\n⚠️ Hai usato il tuo "jolly" per le cancellazioni sotto le ${CONFIG.ORE_CANCELLAZIONE}h: non sarà di nuovo disponibile per 30 giorni.`);
-  } else if (esito.lezioneRecuperata) {
-    _wa(cliente.telefono, `❌ *${CONFIG.STUDIO_NAME}*\nPrenotazione del ${dlCanc} alle ${oraPre} cancellata.\nLezione riaccreditata. ✅`);
-  } else {
-    _wa(cliente.telefono, `❌ *${CONFIG.STUDIO_NAME}*\nPrenotazione del ${dlCanc} alle ${oraPre} cancellata.\n⚠️ Cancellazione a meno di ${CONFIG.ORE_CANCELLAZIONE}h dalla lezione e hai già usato il "jolly" di questo mese — la lezione non viene riaccreditata.`);
-  }
-
-  // Notifica admin
-  _tg(`⚠️ *Cancellazione*\n👤 ${cliente.nome} ${cliente.cognome}\n📅 ${dlCanc} ore ${oraPre}\n${esito.lezioneRecuperata ? 'Lezione riaccreditata ✅'+(esito.jollyUsato?' (jolly usato)':'') : 'Lezione persa (cancellazione tardiva, jolly già usato) ❌'}`);
-
-  // Notifica lista d'attesa se c'è qualcuno in coda
-  _notificaListaAttesa(dataPre, oraPre);
-
-  return { ok: true, recreditata: esito.lezioneRecuperata, lezioniRimanenti: esito.lezioneRecuperata ? cliente.lezioniRim+1 : cliente.lezioniRim };
 }
 
 function getPrenotazioniCliente(token) {
@@ -987,43 +1009,53 @@ function adminRigeneraToken(pw, id) {
 function adminCancellaPrenotazione(pw, id) {
   _checkAdmin(pw);
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sh = ss.getSheetByName("Prenotazioni");
-  const rows = sh.getDataRange().getValues();
 
-  let pRiga = -1, p = null;
-  for (let i = 1; i < rows.length; i++) {
-    if (rows[i][0] === id) { pRiga = i + 1; p = rows[i]; break; }
+  // Stesso lock lettura-poi-scrittura di cancellaPrenotazione (vedi commento lì):
+  // evita che una cancellazione admin e una cliente sulla stessa prenotazione,
+  // arrivate quasi insieme, riaccreditino entrambe la lezione.
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) return { error: "Il sistema è occupato, riprova tra qualche secondo." };
+  try {
+    const sh = ss.getSheetByName("Prenotazioni");
+    const rows = sh.getDataRange().getValues();
+
+    let pRiga = -1, p = null;
+    for (let i = 1; i < rows.length; i++) {
+      if (rows[i][0] === id) { pRiga = i + 1; p = rows[i]; break; }
+    }
+    if (!p) return { error: "Prenotazione non trovata" };
+    if (p[7] === "Cancellata") return { error: "Già cancellata." };
+
+    const c = _tuttiClienti().find(x => x.id === p[1]);
+
+    // Stessa policy "preavviso + jolly" di cancellaPrenotazione (vedi _valutaCancellazione),
+    // per restare allineati e non ripetere il disallineamento già capitato in passato tra
+    // le due funzioni. NB: qui NON c'è nessuna guardia "lezione già passata" — a differenza
+    // della versione cliente, l'admin deve poter sempre cancellare/correggere una
+    // prenotazione, anche a lezione già iniziata o conclusa (decisione presa con
+    // Fabrizio il 23/7/2026). Una cancellazione ammin di una lezione già passata rientra
+    // comunque nel ramo "tardiva" della policy, quindi segue la stessa logica del jolly.
+    const dataPreAdmin = _valStr(p[3], "yyyy-MM-dd");
+    const oraPreAdmin  = _valStr(p[4], "HH:mm");
+    const esito = _valutaCancellazione(p[1], c ? c.dataInizio : "", dataPreAdmin, oraPreAdmin, rows);
+
+    const oggi = new Date();
+    const oraCancellazione = Utilities.formatDate(oggi, Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm");
+    sh.getRange(pRiga, 8).setValue("Cancellata");
+    sh.getRange(pRiga, 9).setValue(oraCancellazione);
+    if (esito.jollyUsato) sh.getRange(pRiga, 11).setValue(true); // colonna K = Jolly Usato
+
+    // Rimuovi dal calendario Google (mancava del tutto in precedenza: lasciava eventi orfani)
+    _calDelPrenotazione(p[9] || null);
+
+    if (c && esito.lezioneRecuperata) {
+      ss.getSheetByName("Clienti").getRange(c._riga, 8).setValue(c.lezioniRim + 1);
+    }
+
+    return { ok: true, lezioneRecuperata: esito.lezioneRecuperata };
+  } finally {
+    lock.releaseLock();
   }
-  if (!p) return { error: "Prenotazione non trovata" };
-  if (p[7] === "Cancellata") return { error: "Già cancellata." };
-
-  const c = _tuttiClienti().find(x => x.id === p[1]);
-
-  // Stessa policy "preavviso + jolly" di cancellaPrenotazione (vedi _valutaCancellazione),
-  // per restare allineati e non ripetere il disallineamento già capitato in passato tra
-  // le due funzioni. NB: qui NON c'è nessuna guardia "lezione già passata" — a differenza
-  // della versione cliente, l'admin deve poter sempre cancellare/correggere una
-  // prenotazione, anche a lezione già iniziata o conclusa (decisione presa con
-  // Fabrizio il 23/7/2026). Una cancellazione ammin di una lezione già passata rientra
-  // comunque nel ramo "tardiva" della policy, quindi segue la stessa logica del jolly.
-  const dataPreAdmin = _valStr(p[3], "yyyy-MM-dd");
-  const oraPreAdmin  = _valStr(p[4], "HH:mm");
-  const esito = _valutaCancellazione(p[1], c ? c.dataInizio : "", dataPreAdmin, oraPreAdmin, rows);
-
-  const oggi = new Date();
-  const oraCancellazione = Utilities.formatDate(oggi, Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm");
-  sh.getRange(pRiga, 8).setValue("Cancellata");
-  sh.getRange(pRiga, 9).setValue(oraCancellazione);
-  if (esito.jollyUsato) sh.getRange(pRiga, 11).setValue(true); // colonna K = Jolly Usato
-
-  // Rimuovi dal calendario Google (mancava del tutto in precedenza: lasciava eventi orfani)
-  _calDelPrenotazione(p[9] || null);
-
-  if (c && esito.lezioneRecuperata) {
-    ss.getSheetByName("Clienti").getRange(c._riga, 8).setValue(c.lezioniRim + 1);
-  }
-
-  return { ok: true, lezioneRecuperata: esito.lezioneRecuperata };
 }
 
 // Segna una prenotazione passata come "Assente" (cliente non presentato).
@@ -1756,36 +1788,44 @@ function iscriviListaAttesa(token, data, oraInizio) {
   if (cliente.stato !== "Attivo") return { error: "Abbonamento non attivo." };
   if (cliente.lezioniRim <= 0)    return { error: "Nessuna lezione rimanente." };
 
-  const lista = _tuttiListaAttesa();
+  // Lock intorno a controllo-poi-scrittura, stesso motivo di prenotaSlot/cancellaPrenotazione:
+  // evita iscrizioni doppie in lista d'attesa da richieste concorrenti dello stesso cliente.
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) return { error: "Il sistema è occupato, riprova tra qualche secondo." };
+  try {
+    const lista = _tuttiListaAttesa();
 
-  // Verifica che non sia già in lista per un altro slot
-  const giàInLista = lista.find(l => l.idCliente === cliente.id && l.stato === "Attivo");
-  if (giàInLista) return { error: "Sei già in lista d'attesa per un altro slot. Cancellati prima di iscriverti a un nuovo slot." };
+    // Verifica che non sia già in lista per un altro slot
+    const giàInLista = lista.find(l => l.idCliente === cliente.id && l.stato === "Attivo");
+    if (giàInLista) return { error: "Sei già in lista d'attesa per un altro slot. Cancellati prima di iscriverti a un nuovo slot." };
 
-  // Verifica che non sia già prenotato per questo slot
-  const prenotazioni = _tuttePrenotazioni();
-  const giàPrenotato = prenotazioni.find(p =>
-    p.idCliente === cliente.id && p.data === data &&
-    p.oraInizio === oraInizio && p.stato !== "Cancellata"
-  );
-  if (giàPrenotato) return { error: "Sei già prenotato per questo slot." };
+    // Verifica che non sia già prenotato per questo slot
+    const prenotazioni = _tuttePrenotazioni();
+    const giàPrenotato = prenotazioni.find(p =>
+      p.idCliente === cliente.id && p.data === data &&
+      p.oraInizio === oraInizio && p.stato !== "Cancellata"
+    );
+    if (giàPrenotato) return { error: "Sei già prenotato per questo slot." };
 
-  const ss  = SpreadsheetApp.getActiveSpreadsheet();
-  const sh  = ss.getSheetByName("ListaAttesa");
-  const id  = "ATT" + Date.now();
-  const tz  = Session.getScriptTimeZone();
-  const now = Utilities.formatDate(new Date(), tz, "yyyy-MM-dd HH:mm");
+    const ss  = SpreadsheetApp.getActiveSpreadsheet();
+    const sh  = ss.getSheetByName("ListaAttesa");
+    const id  = "ATT" + Date.now();
+    const tz  = Session.getScriptTimeZone();
+    const now = Utilities.formatDate(new Date(), tz, "yyyy-MM-dd HH:mm");
 
-  sh.appendRow([id, cliente.id, cliente.nome+" "+cliente.cognome, data, oraInizio, now, "Attivo", ""]);
+    sh.appendRow([id, cliente.id, cliente.nome+" "+cliente.cognome, data, oraInizio, now, "Attivo", ""]);
 
-  // Conta posizione in lista
-  const posizione = lista.filter(l => l.data === data && l.oraInizio === oraInizio && l.stato === "Attivo").length + 1;
+    // Conta posizione in lista
+    const posizione = lista.filter(l => l.data === data && l.oraInizio === oraInizio && l.stato === "Attivo").length + 1;
 
-  const tz2 = Session.getScriptTimeZone();
-  const dl  = _formatDataIT(new Date(data+"T12:00:00"), "EEEE d MMMM");
-  _wa(cliente.telefono, `⏳ *${CONFIG.STUDIO_NAME}*\nCiao ${cliente.nome}! Sei in lista d'attesa per:\n📅 ${dl} ore ${oraInizio}\nSei il numero ${posizione} in lista. Ti avviseremo subito se si libera un posto!`);
+    const tz2 = Session.getScriptTimeZone();
+    const dl  = _formatDataIT(new Date(data+"T12:00:00"), "EEEE d MMMM");
+    _wa(cliente.telefono, `⏳ *${CONFIG.STUDIO_NAME}*\nCiao ${cliente.nome}! Sei in lista d'attesa per:\n📅 ${dl} ore ${oraInizio}\nSei il numero ${posizione} in lista. Ti avviseremo subito se si libera un posto!`);
 
-  return { ok: true, id, posizione };
+    return { ok: true, id, posizione };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function cancellaListaAttesa(token, id) {
