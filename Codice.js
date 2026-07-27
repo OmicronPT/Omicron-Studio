@@ -1965,10 +1965,14 @@ function inviaReminder() {
 function controllaScadenze() {
   const oggi=new Date(), tra7=new Date(); tra7.setDate(oggi.getDate()+7);
   const tz=Session.getScriptTimeZone();
+  const sh=SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Clienti");
   _tuttiClienti().forEach(c => {
     if(c.stato!=="Attivo")return;
     const scad=new Date(c.dataScad);
-    if(scad>=oggi&&scad<=tra7) {
+    if(scad<oggi) {
+      sh.getRange(c._riga, 11).setValue("Scaduto");
+      _logEvento(c.id, c.nome+" "+c.cognome, "Scaduto", `Abbonamento ${c.pacchetto} scaduto il ${_formatDataIT(scad,"d MMMM yyyy")} (aggiornamento automatico)`);
+    } else if(scad<=tra7) {
       const dataLabel=_formatDataIT(scad, "d MMMM yyyy");
       _wa(c.telefono,`⚠️ *${CONFIG.STUDIO_NAME}*\nCiao ${c.nome}! Il tuo abbonamento *${c.pacchetto}* scade il *${dataLabel}*.\nHai ancora ${c.lezioniRim} lezioni disponibili.\nContattaci per rinnovare! 💪`);
     }

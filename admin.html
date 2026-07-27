@@ -1606,8 +1606,8 @@ async function loadTabLog(c){
     return;
   }
 
-  const iconMap={Prenotazione:"💪",Cancellazione:"❌",Rinnovo:"🔄",Annullamento:"🚫"};
-  const clsMap={Prenotazione:"log-pre",Cancellazione:"log-canc",Rinnovo:"log-rinn",Annullamento:"log-canc"};
+  const iconMap={Prenotazione:"💪",Cancellazione:"❌",Rinnovo:"🔄",Annullamento:"🚫",Scaduto:"⏳"};
+  const clsMap={Prenotazione:"log-pre",Cancellazione:"log-canc",Rinnovo:"log-rinn",Annullamento:"log-canc",Scaduto:"log-canc"};
 
   tab.innerHTML=`<div style="padding:4px 0">${log.map(l=>`
     <div class="log-item">
