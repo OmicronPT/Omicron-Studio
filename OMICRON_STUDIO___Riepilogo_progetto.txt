@@ -394,30 +394,9 @@ Migrazione caricamento a fetch (POST) — nice to have. Sostituire la JSONP di g
 Feature (priorità media): statistiche admin (trend, orari più richiesti, tasso cancellazione, clienti più attivi); broadcast WhatsApp (ora possibile, il canale WAAPI è attivo).
 
 
-Nuove feature approvate da Fabrizio (15 luglio 2026) — da implementare in sessioni future, non ancora iniziate.
-Emerse da un brainstorming di fine sessione, cercando idee non già presenti nel backlog. Ordine di implementazione consigliato: dalla più utile/economica alla più costosa (1, 2, 3, 4).
+Nuove feature approvate da Fabrizio (15 luglio 2026) — RIMOSSA il 28/7/2026 (verificato che tutti e 4 i punti erano già completati, la sezione era rimasta per errore come "da iniziare"): 1) scadenza certificato medico — COMPLETATO 17/7; 2) auguri di compleanno automatici — COMPLETATO 17/7; 3) tracciamento assenze/no-show — COMPLETATO 17/7; 4) lista d'attesa con notifica a più persone contemporaneamente — COMPLETATO 20/7. Dettagli di ciascuno nelle rispettive voci "Completato" in cima al documento.
 
-  1. Scadenza certificato medico (la più utile, sforzo contenuto).
-     Oggi il sistema non traccia affatto il certificato medico sportivo, che per uno studio di personal training in Italia è di fatto un requisito.
-     Proposta: nuova colonna "Scadenza certificato" nel foglio Clienti (dopo le colonne esistenti, quindi indice 19+ in _tuttiClienti — attenzione a NON rompere gli indici r[0..17] già mappati); campo nel form admin (aggiungiCliente/adminEditCliente); promemoria WhatsApp automatico riusando il pattern collaudato di controllaScadenze() (che già gira ogni lunedì e manda l'avviso a 7 giorni dalla scadenza abbonamento — stessa logica, altro campo); badge/avviso visibile nella scheda cliente del pannello admin.
-     Opzione da decidere con Fabrizio: bloccare o meno prenotaSlot() se il certificato è scaduto (come già fa per il pacchetto scaduto), oppure limitarsi all'avviso.
-
-  2. Auguri di compleanno automatici (quasi gratis, dato già raccolto).
-     dataNascita è già presente nel foglio Clienti (colonna 13, r[12] in _tuttiClienti) ed è già mappata, ma NON viene mai usata in nessun punto del codice — stessa situazione della colonna Email (vedi backlog "fallback email").
-     Proposta: piccolo trigger giornaliero (o aggancio dentro inviaReminder(), che gira già ogni giorno) che confronta giorno/mese di dataNascita con oggi e accoda un messaggio di auguri via _wa(). Poche righe, riusa tutta l'infrastruttura CodaWA esistente.
-     Nota: dataNascita in _tuttiClienti è letta come r[12]||"" senza conversione — verificare se Sheets la restituisce come Date o stringa prima di confrontare giorno/mese (stessa famiglia del già noto hazard di autoconversione date, vedi CodaCal).
-
-  3. Tracciamento assenze / no-show.
-     Oggi una prenotazione può essere solo "Confermata" o "Cancellata" (colonna Stato, r[7]/colonna H in Prenotazioni): se il cliente semplicemente non si presenta, la lezione risulta consumata ma non c'è traccia del motivo, e non è distinguibile da una sessione svolta.
-     Proposta: nuovo stato "Assente" (o "No-show"); pulsante "Non presentato" nel dettaglio giorno del pannello admin (apriDettaglioGiorno in admin.txt) + nuova funzione backend adminSegnaAssenza(pw, id) agganciata a doPost; lo storico alimenterebbe poi le statistiche admin già in backlog.
-     Da decidere: se lo stato "Assente" debba o meno ri-accreditare la lezione (probabilmente NO — è il senso del no-show), e se vada notificato al cliente.
-
-  4. Lista d'attesa: notifica a più persone contemporaneamente.
-     Oggi _notificaListaAttesa() avvisa SOLO il primo in lista, che ha 30 minuti di tempo (scadenza gestita da controllaScadenzeListaAttesa, ogni 10 min). Se non risponde, si perdono 30 minuti prima di passare al successivo — su uno slot che si libera all'ultimo, il posto rischia di restare vuoto.
-     Proposta: avvisare i primi 2-3 in lista contemporaneamente, logica "chi prenota prima" (il posto va al primo che conferma; gli altri ricevono un messaggio di "posto già assegnato" o semplicemente restano in lista).
-     Attenzione: _notificaListaAttesa() è appena stata toccata (15/7, rimozione trigger fantasma) — rileggerla prima di modificarla. Va gestito il caso di corsa: due clienti che prenotano nello stesso istante lo stesso slot; prenotaSlot() controlla già la capienza, ma verificare che il secondo riceva un errore pulito e comprensibile, non un messaggio criptico. Valutare se serve LockService qui (collegato al punto LockService già in backlog sicurezza).
-
-Sicurezza (non urgente): WHAPI_TOKEN in chiaro nel CONFIG.
+Sicurezza (non urgente): WHAPI_TOKEN in chiaro nel CONFIG. — RIMOSSA il 28/7/2026, duplicato dello stesso punto già segnato come risolto più sopra (vedi nota nella sezione "PRIORITÀ ALTA — Sicurezza").
 
 Completato (14 luglio 2026, sessione sicurezza) — Fix bug collaterale: 3 funzioni admin non agganciate al dispatcher.
   Prima: adminStoricoCanc, adminGetLog, adminSchede erano chiamate da admin.txt via GET/JSONP (con idCliente come parametro) ma non comparivano nello switch di doGet() in codice_gs.txt → rispondevano sempre "Azione non riconosciuta: ...". Le funzioni backend esistevano già ed erano corrette (bug di collegamento, non di logica).
