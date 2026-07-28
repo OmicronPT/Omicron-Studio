@@ -383,7 +383,7 @@ Valutazione approfondita del progetto (14 luglio 2026) — backlog emerso da una
 
 Migrazione WhatsApp Whapi → WAAPI: COMPLETATA E TESTATA il 15 luglio 2026 (dettagli completi nella sezione "Completato" in cima al documento). Nessuna azione residua su questo fronte, salvo verificare che sia stato fatto il deploy "Nuova versione" del deployment Apps Script.
 
-Pulizia dati di test. I numerosi test di questa sessione (Calendar, cancellazioni) hanno saturato il limite di 3 cancellazioni gratuite mensili per il cliente di test e lasciato un evento Calendar "fantasma" creato con l'orario sbagliato prima del fix del bug di formattazione (da cancellare a mano dal Calendar). Per ripetere test di cancellazione senza sbattere di nuovo contro il limite: ripulire a mano dal foglio Prenotazioni le righe di test già "Cancellata" per quel cliente (o svuotare la loro colonna I).
+Pulizia dati di test — RIMOSSA il 28/7/2026: il presupposto (limite di 3 cancellazioni gratuite mensili) non esiste più, sostituito il 23/7 dalla policy "preavviso + jolly"; l'evento Calendar "fantasma" citato qui è lo stesso caso già indagato e chiuso il 24/7 (debris di test di inizio luglio, nessuna azione di codice necessaria, solo cancellazione manuale facoltativa da Calendar).
 
 adminLog lenta. ReferenceError su action=adminLog (risposta oltre i 10s), probabile lettura dell'intero foglio Log ormai cresciuto. Ottimizzare leggendo solo le ultime N righe.
 
