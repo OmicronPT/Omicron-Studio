@@ -118,7 +118,10 @@ function doGet(e) {
   }
 
   const json = JSON.stringify(result);
-  if (callback) {
+  // Il nome della callback JSONP viene concatenato ed eseguito come JavaScript nel browser
+  // del chiamante: va validato come identificatore JS valido prima di usarlo, altrimenti un
+  // callback malevolo (es. contenente "</script><script>...") finirebbe eseguito cosi' com'e'.
+  if (callback && /^[\w$]+$/.test(callback)) {
     return ContentService.createTextOutput(callback+"("+json+")")
       .setMimeType(ContentService.MimeType.JAVASCRIPT);
   }

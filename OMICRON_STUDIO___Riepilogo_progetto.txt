@@ -14,6 +14,13 @@ Notifiche: WhatsApp via WAAPI (waapi.app, $10/mese, instance #100071) per i clie
 I tre file (codice_gs.txt, admin.txt, cliente.txt) sono caricati come riferimento statico nel progetto Claude e vanno ri-caricati manualmente dopo ogni modifica per restare sincronizzati. Anche questo file di riepilogo va aggiornato e ricaricato a fine sessione.
 
 
+Completato (29 luglio 2026) — Validato il parametro callback di doGet() (difetto JSONP dal backlog "priorità media/bassa").
+  Contesto: doGet() concatenava il parametro callback fornito dal chiamante direttamente nell'output JavaScript eseguibile (`callback+"("+json+")"`, con MimeType JAVASCRIPT), senza validarlo — difetto classico JSONP. Rischio reale già valutato basso in precedenza (l'autenticazione passa per token/pw espliciti nella richiesta, non per cookie di sessione, quindi non c'è "ambient authority" da sfruttare), ma a costo zero da sistemare.
+  Fix: aggiunto un controllo che il valore di callback sia un identificatore JS valido (regex /^[\w$]+$/, lettere/cifre/underscore/dollaro) prima di usarlo; se non lo è, la risposta torna JSON puro (MimeType JSON) invece di essere avvolta nella chiamata di funzione. I callback legittimi generati dall'app (jsonp() in admin.html/cliente.html, pattern "_cb_"+timestamp+numero casuale) continuano a funzionare invariati, dato che rispettano già questo formato.
+  File modificato: solo Codice.js (doGet). Sintassi verificata con node --check.
+  TESTATO IN PRODUZIONE E CONFERMATO FUNZIONANTE il 29 luglio 2026: chiamata diretta all'endpoint live con callback valido (risposta avvolta correttamente), con callback malevolo tipo "alert(1)//" (risposta tornata come JSON puro, non eseguibile), e senza callback (comportamento invariato) — nessuna regressione sul percorso normale.
+  Deploy: clasp push + clasp deploy sulla distribuzione esistente (stesso ID/URL, @82→@83) — necessario perché doGet() è raggiunta direttamente dal web app.
+
 Completato (28 luglio 2026) — Fallback email quando WhatsApp fallisce definitivamente (punto "priorità media" del backlog).
   Richiesta di Fabrizio: far scattare un'email al cliente SOLO quando l'invio WhatsApp fallisce in modo definitivo (non su un singolo tentativo/blip transitorio, che i retry esistenti già gestiscono), riusando l'infrastruttura coda già collaudata invece di un sistema parallelo.
   Contesto: la colonna Email nel foglio Clienti esiste da sempre ma non era mai usata nel codice; l'unico canale di notifica al cliente era WhatsApp via WAAPI, che a metà luglio era già andato giù una volta (Whapi) fermando tutte le notifiche fino all'attivazione di WAAPI.
@@ -397,7 +404,7 @@ Valutazione approfondita del progetto (14 luglio 2026) — backlog emerso da una
 
   PRIORITÀ MEDIA/BASSA — emerse dalla revisione generale del 27 luglio 2026 (vedi voce "Completato" in cima per il dettaglio della revisione):
   - Nessuna archiviazione dei dati storici. Prenotazioni/Log/CodaWA/CodaCal crescono senza limite (ogni riga resta per sempre); ogni richiesta rilegge l'intero storico con _tuttePrenotazioni()/getDataRange().getValues(). Con l'attività attuale non si nota, ma è una crescita lineare senza fine: tra 1-2 anni le richieste rallenteranno progressivamente. Proposta: spostare periodicamente in un foglio "Archivio" le prenotazioni cancellate/passate da oltre N mesi, magari agganciato allo stesso trigger del backup mensile appena implementato.
-  - Parametro `callback` di doGet() non validato prima di essere concatenato nell'output JavaScript eseguibile (riga ~121) — difetto classico JSONP. Rischio reale basso qui (l'autenticazione passa per token/pw espliciti nella richiesta, non per cookie di sessione, quindi non c'è "ambient authority" da sfruttare), ma costerebbe poco validare che `callback` sia un identificatore JS valido (regex tipo /^[\w$]+$/) prima di usarlo, invece di accettarlo così com'è.
+  - Parametro `callback` di doGet() non validato — COMPLETATO e TESTATO IN PRODUZIONE il 29 luglio 2026, vedi voce "Completato" in cima al documento.
   - Nessuna ricerca testuale per nome nella lista clienti admin — COMPLETATO il 27 luglio 2026, vedi voce "Completato" in cima al documento.
 
 Migrazione WhatsApp Whapi → WAAPI: COMPLETATA E TESTATA il 15 luglio 2026 (dettagli completi nella sezione "Completato" in cima al documento). Nessuna azione residua su questo fronte, salvo verificare che sia stato fatto il deploy "Nuova versione" del deployment Apps Script.
