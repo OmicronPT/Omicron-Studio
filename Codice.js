@@ -2387,3 +2387,99 @@ function testWaapi() {
   Logger.log("HTTP " + resp.getResponseCode());
   Logger.log(resp.getContentText());
 }
+
+// ──────────────────────────────────────────────────────────
+//  TEST AUTOMATICI
+// ──────────────────────────────────────────────────────────
+// Da eseguire a mano dall'editor Apps Script (Esegui -> runTests) prima di un
+// deploy importante, o dopo aver toccato una delle funzioni testate qui sotto.
+// Copre solo funzioni "pure" (calcolo puro, nessuna lettura/scrittura su Google
+// Sheets) cosi' da non dover creare un foglio di test separato ne' rischiare
+// di toccare dati reali: _valutaCancellazione riceve "rows" come parametro
+// (qui un array finto), getCapienzaSlot riceve "limiti" come parametro (idem).
+// Non sostituisce i test manuali in produzione per i flussi che scrivono
+// davvero sui fogli (prenotazione, cancellazione reale, ecc.), ma intercetta
+// subito una regressione nella logica di calcolo senza doverla ripetere ogni
+// volta a mano. Logga OK/FALLITO per ogni caso e un riepilogo finale.
+function runTests() {
+  const risultati = [];
+  const assert = (nome, condizione) => risultati.push({ nome, ok: !!condizione });
+  const tz = Session.getScriptTimeZone();
+
+  // ── Conversioni orario ──────────────────────────────────
+  assert("_oreToMin('09:00') === 540", _oreToMin("09:00") === 540);
+  assert("_oreToMin('00:00') === 0", _oreToMin("00:00") === 0);
+  assert("_minToOre(540) === '09:00'", _minToOre(540) === "09:00");
+  assert("orarioInMinuti('14:30') === 870", orarioInMinuti("14:30") === 870);
+
+  // ── getCapienzaSlot ──────────────────────────────────────
+  assert("getCapienzaSlot senza limiti -> MAX_CONTEMPORANEI",
+    getCapienzaSlot(new Date(), "10:00", []) === CONFIG.MAX_CONTEMPORANEI);
+  {
+    // Giorni calcolati rispetto a oggi (non hardcoded) cosi' il test resta valido in ogni data di esecuzione.
+    const oggi = new Date();
+    const giornoITOggi = oggi.getDay() === 0 ? 7 : oggi.getDay();
+    const giornoITAltro = giornoITOggi === 1 ? 2 : 1;
+
+    const limitiOggi = [{ tipo: "ricorrente", giornoSettimana: giornoITOggi, oraInizio: "09:00", oraFine: "11:00", maxPersone: 1 }];
+    assert("getCapienzaSlot: limite ricorrente su oggi, dentro fascia oraria -> 1",
+      getCapienzaSlot(oggi, "10:00", limitiOggi) === 1);
+    assert("getCapienzaSlot: limite ricorrente su oggi, fuori fascia oraria -> default",
+      getCapienzaSlot(oggi, "15:00", limitiOggi) === CONFIG.MAX_CONTEMPORANEI);
+
+    const limitiAltroGiorno = [{ tipo: "ricorrente", giornoSettimana: giornoITAltro, oraInizio: "09:00", oraFine: "11:00", maxPersone: 1 }];
+    assert("getCapienzaSlot: limite ricorrente su un altro giorno -> default",
+      getCapienzaSlot(oggi, "10:00", limitiAltroGiorno) === CONFIG.MAX_CONTEMPORANEI);
+  }
+
+  // ── _valutaCancellazione (policy preavviso + jolly) ─────
+  {
+    const dataInizioCliente = Utilities.formatDate(new Date(Date.now() - 10 * 86400000), tz, "yyyy-MM-dd"); // ciclo jolly iniziato 10 giorni fa
+
+    // Caso 1: cancellazione con >=24h di preavviso -> sempre riaccreditata, nessun jolly toccato.
+    const traDueGiorni = new Date(Date.now() + 48 * 3600000);
+    const esito1 = _valutaCancellazione(
+      "CLI_TEST", dataInizioCliente,
+      Utilities.formatDate(traDueGiorni, tz, "yyyy-MM-dd"), Utilities.formatDate(traDueGiorni, tz, "HH:mm"),
+      []
+    );
+    assert("_valutaCancellazione: >=24h -> riaccreditata, jolly non usato",
+      esito1.lezioneRecuperata === true && esito1.jollyUsato === false && esito1.tardiva === false);
+
+    // Caso 2: cancellazione tardiva (<24h), nessun jolly ancora usato nel ciclo -> riaccreditata, jolly consumato.
+    const tra2Ore = new Date(Date.now() + 2 * 3600000);
+    const esito2 = _valutaCancellazione(
+      "CLI_TEST", dataInizioCliente,
+      Utilities.formatDate(tra2Ore, tz, "yyyy-MM-dd"), Utilities.formatDate(tra2Ore, tz, "HH:mm"),
+      []
+    );
+    assert("_valutaCancellazione: <24h con jolly disponibile -> riaccreditata, jolly usato",
+      esito2.lezioneRecuperata === true && esito2.jollyUsato === true && esito2.tardiva === true);
+
+    // Caso 3: cancellazione tardiva (<24h), jolly gia' usato in questo ciclo (riga finta con Jolly Usato=true
+    // e data cancellazione di oggi, quindi dentro il ciclo corrente) -> lezione persa.
+    const rigaJollyGiaUsato = [];
+    rigaJollyGiaUsato[1]  = "CLI_TEST";                                        // colonna B = ID Cliente
+    rigaJollyGiaUsato[7]  = "Cancellata";                                      // colonna H = Stato
+    rigaJollyGiaUsato[8]  = Utilities.formatDate(new Date(), tz, "yyyy-MM-dd HH:mm"); // colonna I = Data Cancellazione
+    rigaJollyGiaUsato[10] = true;                                              // colonna K = Jolly Usato
+    const esito3 = _valutaCancellazione(
+      "CLI_TEST", dataInizioCliente,
+      Utilities.formatDate(tra2Ore, tz, "yyyy-MM-dd"), Utilities.formatDate(tra2Ore, tz, "HH:mm"),
+      [[], rigaJollyGiaUsato]
+    );
+    assert("_valutaCancellazione: <24h con jolly gia' usato nel ciclo -> lezione persa",
+      esito3.lezioneRecuperata === false && esito3.jollyUsato === false && esito3.tardiva === true);
+  }
+
+  // ── Festivita' ───────────────────────────────────────────
+  assert("_isFestivo Natale (2026-12-25) -> true", _isFestivo("2026-12-25") === true);
+  assert("_isFestivo 4 agosto 2026 (feriale) -> false", _isFestivo("2026-08-04") === false);
+
+  // ── Riepilogo ────────────────────────────────────────────
+  const falliti = risultati.filter(r => !r.ok);
+  risultati.forEach(r => Logger.log((r.ok ? "OK      " : "FALLITO ") + r.nome));
+  Logger.log(risultati.length - falliti.length + "/" + risultati.length + " test passati.");
+  if (falliti.length) Logger.log("ATTENZIONE: " + falliti.length + " test falliti, vedi sopra.");
+  return { totali: risultati.length, falliti: falliti.length, dettaglio: risultati };
+}
