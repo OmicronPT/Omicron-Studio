@@ -2035,6 +2035,44 @@ function controllaScadenze() {
 // Nessuna pulizia automatica dei backup vecchi (volume di dati contenuto per uno studio di
 // personal training) — se in futuro dovesse crescere troppo, valutare di cancellare a mano
 // le copie più vecchie di N mesi dalla cartella "Omicron Studio - Backup" su Drive.
+// Rimuove da CodaWA/CodaCal le righe già concluse con successo da più di
+// RITENZIONE_CODE_GIORNI giorni. drainCodaWA()/drainCodaCal() rileggono l'INTERO
+// foglio ad ogni giro di trigger (ogni minuto, per sempre): una volta che una riga
+// è "Inviato"/"Creato"/"Saltata" non serve più a nessuna funzione del codice, quindi
+// tenerla per sempre costa solo tempo di lettura crescente nel tempo, senza alcun
+// beneficio. Le righe "In coda" (in attesa di essere processate) e "Errore" (fallite,
+// da rivedere o far ripartire a mano con riprovaCodaWAErrore) non vengono MAI toccate
+// qui: solo la coda diventa più snella, nessun messaggio/evento in sospeso viene perso.
+function pulisciCodeVecchie() {
+  const RITENZIONE_GIORNI = 30;
+  const sogliaMs = Date.now() - RITENZIONE_GIORNI * 86400000;
+  let rimosseWA = 0, rimosseCal = 0;
+
+  // CodaWA: colonna A = Timestamp di accodamento, colonna D = Stato.
+  const shWA   = getFogliCodaWA();
+  const datiWA = shWA.getDataRange().getValues();
+  for (let i = datiWA.length - 1; i >= 1; i--) {
+    if (datiWA[i][3] !== "Inviato") continue; // tocca solo le righe concluse con successo
+    const ts = datiWA[i][0] instanceof Date ? datiWA[i][0].getTime() : new Date(datiWA[i][0]).getTime();
+    if (ts < sogliaMs) { shWA.deleteRow(i + 1); rimosseWA++; }
+  }
+
+  // CodaCal non ha una colonna Timestamp propria: si usa la data della lezione
+  // (colonna C) come proxy dell'anzianità della riga — una riga "Creato"/"Saltata"
+  // per una lezione di tanti giorni fa non serve più a nessuna funzione.
+  const shCal   = getFogliCodaCal();
+  const datiCal = shCal.getDataRange().getValues();
+  for (let i = datiCal.length - 1; i >= 1; i--) {
+    const stato = datiCal[i][5];
+    if (stato !== "Creato" && stato !== "Saltata") continue;
+    const ts = new Date(_codaCalStr(datiCal[i][2], "yyyy-MM-dd") + "T00:00:00").getTime();
+    if (ts < sogliaMs) { shCal.deleteRow(i + 1); rimosseCal++; }
+  }
+
+  Logger.log("Pulizia code: rimosse " + rimosseWA + " righe da CodaWA, " + rimosseCal + " da CodaCal.");
+  return { rimosseWA, rimosseCal };
+}
+
 function backupMensile() {
   const tz = Session.getScriptTimeZone();
   const nomeBackup = "Omicron Studio - Backup " + Utilities.formatDate(new Date(), tz, "yyyy-MM-dd");
@@ -2044,7 +2082,13 @@ function backupMensile() {
     const rootFolders = DriveApp.getFoldersByName(rootName);
     const folder = rootFolders.hasNext() ? rootFolders.next() : DriveApp.createFolder(rootName);
     DriveApp.getFileById(ss.getId()).makeCopy(nomeBackup, folder);
-    _tg(`💾 *${CONFIG.STUDIO_NAME}*\nBackup mensile completato: "${nomeBackup}" salvato su Drive.`);
+
+    // Pulizia code eseguita SOLO dopo un backup riuscito: le righe rimosse dal
+    // foglio live restano comunque recuperabili dalla copia di backup appena
+    // creata, in caso servisse tornare indietro.
+    const pulizia = pulisciCodeVecchie();
+
+    _tg(`💾 *${CONFIG.STUDIO_NAME}*\nBackup mensile completato: "${nomeBackup}" salvato su Drive.\n🧹 Pulizia code: rimosse ${pulizia.rimosseWA} righe da CodaWA, ${pulizia.rimosseCal} da CodaCal.`);
   } catch(e) {
     Logger.log("Errore backup mensile: " + e.message);
     _tg(`⚠️ *${CONFIG.STUDIO_NAME}*\nBackup mensile FALLITO: ${e.message}`);
