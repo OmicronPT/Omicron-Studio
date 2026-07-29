@@ -453,9 +453,9 @@ function prenotaSlot(token, data, oraInizio, silent, ctx) {
     // WhatsApp (soppresso quando chiamato in modalità silent, es. ricorrente)
     if (!silent) {
       const dl = _formatDataIT(new Date(data+"T12:00:00"), "EEEE d MMMM");
-      _wa(cliente.telefono, `✅ *${CONFIG.STUDIO_NAME}*\nCiao ${cliente.nome}! Prenotazione confermata.\n📅 ${dl} ore ${oraInizio}\nLezioni rimanenti: ${nuovoRim}`);
+      _wa(cliente.telefono, `✅ *${CONFIG.STUDIO_NAME}*\nCiao ${cliente.nome}! Prenotazione confermata.\n📅 ${dl} ore ${oraInizio}\nLezioni rimanenti: ${nuovoRim}`, cliente.email);
       if (nuovoRim <= CONFIG.SOGLIA_AVVISO && nuovoRim > 0)
-        _wa(cliente.telefono, `⚠️ *${CONFIG.STUDIO_NAME}*\nCiao ${cliente.nome}, rimangono solo *${nuovoRim} lezioni*. Contattaci!`);
+        _wa(cliente.telefono, `⚠️ *${CONFIG.STUDIO_NAME}*\nCiao ${cliente.nome}, rimangono solo *${nuovoRim} lezioni*. Contattaci!`, cliente.email);
       _tg(`🔔 *Nuova prenotazione*\n👤 ${cliente.nome} ${cliente.cognome}\n📅 ${dl} ore ${oraInizio}\n💪 Lezioni rimanenti: ${nuovoRim}`);
     }
 
@@ -530,10 +530,10 @@ function prenotaRicorrente(token, data, oraInizio, settimane) {
   let msgCli = `✅ *${CONFIG.STUDIO_NAME}*\nCiao ${cliente.nome}! Prenotate ${prenotate.length} sessioni:\n${elenco}`;
   if (lezioniRim !== null) msgCli += `\nLezioni rimanenti: ${lezioniRim}`;
   if (saltate.length) msgCli += `\n\n⚠️ Non prenotate (${saltate.length}): ` + saltate.map(s => s.dataLabel).join(", ");
-  _wa(cliente.telefono, msgCli);
+  _wa(cliente.telefono, msgCli, cliente.email);
 
   if (lezioniRim !== null && lezioniRim <= CONFIG.SOGLIA_AVVISO && lezioniRim > 0)
-    _wa(cliente.telefono, `⚠️ *${CONFIG.STUDIO_NAME}*\nCiao ${cliente.nome}, rimangono solo *${lezioniRim} lezioni*. Contattaci!`);
+    _wa(cliente.telefono, `⚠️ *${CONFIG.STUDIO_NAME}*\nCiao ${cliente.nome}, rimangono solo *${lezioniRim} lezioni*. Contattaci!`, cliente.email);
 
   _tg(`🔔 *Nuova prenotazione ricorrente*\n👤 ${cliente.nome} ${cliente.cognome}\n${elenco}\n💪 Lezioni rimanenti: ${lezioniRim}`);
 
@@ -652,11 +652,11 @@ function cancellaPrenotazione(token, idPrenotazione) {
     const dlCanc = _formatDataIT(new Date(dataPre+"T12:00:00"), "d MMMM");
 
     if (esito.jollyUsato) {
-      _wa(cliente.telefono, `❌ *${CONFIG.STUDIO_NAME}*\nPrenotazione del ${dlCanc} alle ${oraPre} cancellata.\nLezione riaccreditata. ✅\n⚠️ Hai usato il tuo "jolly" per le cancellazioni sotto le ${CONFIG.ORE_CANCELLAZIONE}h: non sarà di nuovo disponibile per 30 giorni.`);
+      _wa(cliente.telefono, `❌ *${CONFIG.STUDIO_NAME}*\nPrenotazione del ${dlCanc} alle ${oraPre} cancellata.\nLezione riaccreditata. ✅\n⚠️ Hai usato il tuo "jolly" per le cancellazioni sotto le ${CONFIG.ORE_CANCELLAZIONE}h: non sarà di nuovo disponibile per 30 giorni.`, cliente.email);
     } else if (esito.lezioneRecuperata) {
-      _wa(cliente.telefono, `❌ *${CONFIG.STUDIO_NAME}*\nPrenotazione del ${dlCanc} alle ${oraPre} cancellata.\nLezione riaccreditata. ✅`);
+      _wa(cliente.telefono, `❌ *${CONFIG.STUDIO_NAME}*\nPrenotazione del ${dlCanc} alle ${oraPre} cancellata.\nLezione riaccreditata. ✅`, cliente.email);
     } else {
-      _wa(cliente.telefono, `❌ *${CONFIG.STUDIO_NAME}*\nPrenotazione del ${dlCanc} alle ${oraPre} cancellata.\n⚠️ Cancellazione a meno di ${CONFIG.ORE_CANCELLAZIONE}h dalla lezione e hai già usato il "jolly" di questo mese — la lezione non viene riaccreditata.`);
+      _wa(cliente.telefono, `❌ *${CONFIG.STUDIO_NAME}*\nPrenotazione del ${dlCanc} alle ${oraPre} cancellata.\n⚠️ Cancellazione a meno di ${CONFIG.ORE_CANCELLAZIONE}h dalla lezione e hai già usato il "jolly" di questo mese — la lezione non viene riaccreditata.`, cliente.email);
     }
 
     // Notifica admin
@@ -1235,7 +1235,7 @@ function adminRinnovaAbbonamento(pw, data) {
   shC.getRange(c._riga,9).setValue(Utilities.formatDate(oggi,tz,"yyyy-MM-dd"));
   shC.getRange(c._riga,10).setValue(Utilities.formatDate(nuovaScad,tz,"yyyy-MM-dd"));
   shC.getRange(c._riga,11).setValue("Attivo");
-  _wa(c.telefono,`✅ *${CONFIG.STUDIO_NAME}*\nCiao ${c.nome}! Abbonamento *${pkg.nome}* rinnovato.\n📅 Valido fino al ${_formatDataIT(nuovaScad, "d MMMM yyyy")}\n💪 ${nuoveLezioni} lezioni${recuperabili>0?' (incluse '+recuperabili+' da recupero)':''}`);
+  _wa(c.telefono,`✅ *${CONFIG.STUDIO_NAME}*\nCiao ${c.nome}! Abbonamento *${pkg.nome}* rinnovato.\n📅 Valido fino al ${_formatDataIT(nuovaScad, "d MMMM yyyy")}\n💪 ${nuoveLezioni} lezioni${recuperabili>0?' (incluse '+recuperabili+' da recupero)':''}`, c.email);
 
   // Log rinnovo
   _logEvento(c.id, c.nome+" "+c.cognome, "Rinnovo",
@@ -1296,7 +1296,7 @@ function aggiungiCliente(data) {
   // Messaggio di benvenuto automatico con link personale e istruzioni per salvare
   // la pagina sulla schermata Home del telefono (icona come un'app vera).
   if (data.telefono) {
-    _wa(data.telefono, `🎉 *Benvenuto in ${CONFIG.STUDIO_NAME}, ${data.nome}!*\nEcco il tuo link personale per prenotare le lezioni:\n${link}\n\n📱 Salvalo sulla schermata Home del telefono, così lo trovi come un'app, senza cercarlo su WhatsApp ogni volta:\n\n*Se hai un iPhone:*\n1. Apri il link (si apre in Safari)\n2. Tocca l'icona di condivisione in basso (quadrato con freccia)\n3. Scorri e tocca "Aggiungi a Home"\n4. Tocca "Aggiungi" in alto a destra\n\n*Se hai un Android:*\n1. Apri il link (si apre in Chrome)\n2. Tocca i tre puntini in alto a destra\n3. Tocca "Aggiungi a schermata Home" (o "Installa app")\n4. Conferma\n\nA presto! 💪`);
+    _wa(data.telefono, `🎉 *Benvenuto in ${CONFIG.STUDIO_NAME}, ${data.nome}!*\nEcco il tuo link personale per prenotare le lezioni:\n${link}\n\n📱 Salvalo sulla schermata Home del telefono, così lo trovi come un'app, senza cercarlo su WhatsApp ogni volta:\n\n*Se hai un iPhone:*\n1. Apri il link (si apre in Safari)\n2. Tocca l'icona di condivisione in basso (quadrato con freccia)\n3. Scorri e tocca "Aggiungi a Home"\n4. Tocca "Aggiungi" in alto a destra\n\n*Se hai un Android:*\n1. Apri il link (si apre in Chrome)\n2. Tocca i tre puntini in alto a destra\n3. Tocca "Aggiungi a schermata Home" (o "Installa app")\n4. Conferma\n\nA presto! 💪`, data.email);
   }
 
   return { ok:true, id, token, link };
@@ -1334,7 +1334,8 @@ function richiestaRinnovo(token, idPacchetto) {
   _wa(cliente.telefono,
     `✅ *${CONFIG.STUDIO_NAME}*
 Ciao ${cliente.nome}! La tua richiesta di rinnovo per il pacchetto *${nomePacchetto}* è stata inviata.
-Ti contatteremo presto per completare il rinnovo! 💪`
+Ti contatteremo presto per completare il rinnovo! 💪`,
+    cliente.email
   );
 
   // Log
@@ -1820,7 +1821,7 @@ function iscriviListaAttesa(token, data, oraInizio) {
 
     const tz2 = Session.getScriptTimeZone();
     const dl  = _formatDataIT(new Date(data+"T12:00:00"), "EEEE d MMMM");
-    _wa(cliente.telefono, `⏳ *${CONFIG.STUDIO_NAME}*\nCiao ${cliente.nome}! Sei in lista d'attesa per:\n📅 ${dl} ore ${oraInizio}\nSei il numero ${posizione} in lista. Ti avviseremo subito se si libera un posto!`);
+    _wa(cliente.telefono, `⏳ *${CONFIG.STUDIO_NAME}*\nCiao ${cliente.nome}! Sei in lista d'attesa per:\n📅 ${dl} ore ${oraInizio}\nSei il numero ${posizione} in lista. Ti avviseremo subito se si libera un posto!`, cliente.email);
 
     return { ok: true, id, posizione };
   } finally {
@@ -1876,7 +1877,7 @@ function _gestisciPrenotazioneListaAttesa(idCliente, data, oraInizio, slotOraPie
       sh.getRange(l._riga, 7).setValue("Attivo");
       sh.getRange(l._riga, 8).setValue("");
       const c = clienti.find(x => x.id === l.idCliente);
-      if (c) _wa(c.telefono, `ℹ️ *${CONFIG.STUDIO_NAME}*\nCiao ${c.nome}, il posto per ${dl} ore ${oraInizio} è stato preso da un altro cliente.\nResti in lista d'attesa: ti avviseremo al prossimo posto libero.`);
+      if (c) _wa(c.telefono, `ℹ️ *${CONFIG.STUDIO_NAME}*\nCiao ${c.nome}, il posto per ${dl} ore ${oraInizio} è stato preso da un altro cliente.\nResti in lista d'attesa: ti avviseremo al prossimo posto libero.`, c.email);
     }
   });
 }
@@ -1915,7 +1916,7 @@ function _notificaListaAttesa(data, oraInizio) {
 
     // Manda WhatsApp con link diretto
     const link = "https://OmicronPT.github.io/Omicron-Studio/cliente.html?t=" + cliente.token;
-    _wa(cliente.telefono, `🎉 *${CONFIG.STUDIO_NAME}*\nCiao ${cliente.nome}! Si è liberato un posto per:\n📅 ${dl} ore ${oraInizio}\n\nHai *${CONFIG.LISTA_ATTESA_TIMEOUT_MIN} minuti* per prenotare:\n${link}${avvisoCondiviso}\n\nDopo ${CONFIG.LISTA_ATTESA_TIMEOUT_MIN} minuti, se nessuno ha prenotato, il posto passerà al prossimo in lista.`);
+    _wa(cliente.telefono, `🎉 *${CONFIG.STUDIO_NAME}*\nCiao ${cliente.nome}! Si è liberato un posto per:\n📅 ${dl} ore ${oraInizio}\n\nHai *${CONFIG.LISTA_ATTESA_TIMEOUT_MIN} minuti* per prenotare:\n${link}${avvisoCondiviso}\n\nDopo ${CONFIG.LISTA_ATTESA_TIMEOUT_MIN} minuti, se nessuno ha prenotato, il posto passerà al prossimo in lista.`, cliente.email);
   });
 
   // Nota: la scadenza NON viene gestita qui con un trigger dedicato
@@ -1968,7 +1969,7 @@ function inviaReminder() {
   // Reminder ai clienti
   predomani.forEach(p => {
     const c = clienti.find(x=>x.id===p.idCliente);
-    if (c) _wa(c.telefono, `🔔 *Reminder ${CONFIG.STUDIO_NAME}*\nCiao ${c.nome}! Ti aspettiamo domani alle ${p.oraInizio} 💪`);
+    if (c) _wa(c.telefono, `🔔 *Reminder ${CONFIG.STUDIO_NAME}*\nCiao ${c.nome}! Ti aspettiamo domani alle ${p.oraInizio} 💪`, c.email);
   });
 
   // Riepilogo giornaliero all'admin
@@ -1997,7 +1998,7 @@ function inviaReminder() {
     if (!c.dataNascita || c.dataNascita.length < 10) return; // vuota o non nel formato atteso, salta senza errori
     const meseGiornoNascita = c.dataNascita.substring(5, 10); // es. "2026-07-22" -> "07-22"
     if (meseGiornoNascita === oggiTz) {
-      _wa(c.telefono, `🎉 *${CONFIG.STUDIO_NAME}*\nTanti auguri di buon compleanno, ${c.nome}! 🎂\nDa tutto il team ti auguriamo una splendida giornata! 💪`);
+      _wa(c.telefono, `🎉 *${CONFIG.STUDIO_NAME}*\nTanti auguri di buon compleanno, ${c.nome}! 🎂\nDa tutto il team ti auguriamo una splendida giornata! 💪`, c.email);
     }
   });
 }
@@ -2014,14 +2015,14 @@ function controllaScadenze() {
       _logEvento(c.id, c.nome+" "+c.cognome, "Scaduto", `Abbonamento ${c.pacchetto} scaduto il ${_formatDataIT(scad,"d MMMM yyyy")} (aggiornamento automatico)`);
     } else if(scad<=tra7) {
       const dataLabel=_formatDataIT(scad, "d MMMM yyyy");
-      _wa(c.telefono,`⚠️ *${CONFIG.STUDIO_NAME}*\nCiao ${c.nome}! Il tuo abbonamento *${c.pacchetto}* scade il *${dataLabel}*.\nHai ancora ${c.lezioniRim} lezioni disponibili.\nContattaci per rinnovare! 💪`);
+      _wa(c.telefono,`⚠️ *${CONFIG.STUDIO_NAME}*\nCiao ${c.nome}! Il tuo abbonamento *${c.pacchetto}* scade il *${dataLabel}*.\nHai ancora ${c.lezioniRim} lezioni disponibili.\nContattaci per rinnovare! 💪`, c.email);
     }
     // Promemoria scadenza certificato medico (stesso schema di 7 giorni prima, solo avviso — non blocca le prenotazioni)
     if (c.scadCertificato) {
       const scadCert=new Date(c.scadCertificato);
       if (scadCert>=oggi && scadCert<=tra7) {
         const dataCertLabel=_formatDataIT(scadCert, "d MMMM yyyy");
-        _wa(c.telefono,`🏥 *${CONFIG.STUDIO_NAME}*\nCiao ${c.nome}! Il tuo certificato medico sportivo scade il *${dataCertLabel}*.\nRicordati di rinnovarlo e di portarci la copia aggiornata. 📋`);
+        _wa(c.telefono,`🏥 *${CONFIG.STUDIO_NAME}*\nCiao ${c.nome}! Il tuo certificato medico sportivo scade il *${dataCertLabel}*.\nRicordati di rinnovarlo e di portarci la copia aggiornata. 📋`, c.email);
       }
     }
   });
@@ -2061,12 +2062,14 @@ function setupTriggers() {
 // ──────────────────────────────────────────────────────────
 //  WHATSAPP
 // ──────────────────────────────────────────────────────────
-function _wa(numero, msg) {
+function _wa(numero, msg, email) {
   // Accoda il messaggio: l'invio vero avviene in background (drainCodaWA via trigger),
   // cosi' la risposta all'utente non aspetta piu' la chiamata HTTP a WAAPI.
+  // L'email (se nota) viene salvata in colonna H: serve solo come fallback nel drain,
+  // se WhatsApp fallisce definitivamente dopo tutti i tentativi (vedi _emailFallback).
   if (!CONFIG.WAAPI_TOKEN) return;
   try {
-    getFogliCodaWA().appendRow([new Date(), String(numero), msg, "In coda", 0, ""]);
+    getFogliCodaWA().appendRow([new Date(), String(numero), msg, "In coda", 0, "", "", email || ""]);
   } catch(e) {
     Logger.log("WA enqueue error: " + e.message);
   }
@@ -2090,7 +2093,7 @@ function getFogliCodaWA() {
   let sh = ss.getSheetByName("CodaWA");
   if (!sh) {
     sh = ss.insertSheet("CodaWA");
-    sh.getRange(1, 1, 1, 6).setValues([["Timestamp", "Telefono", "Messaggio", "Stato", "Tentativi", "Inviato"]]);
+    sh.getRange(1, 1, 1, 8).setValues([["Timestamp", "Telefono", "Messaggio", "Stato", "Tentativi", "Inviato", "Canale", "Email"]]);
   }
   return sh;
 }
@@ -2113,6 +2116,27 @@ function _waSend(numero, msg) {
     return code >= 200 && code < 300;
   } catch(e) {
     Logger.log("WA send error: " + e.message);
+    return false;
+  }
+}
+
+// Fallback email: chiamato SOLO dal drain, e SOLO quando WhatsApp ha fallito
+// definitivamente (dopo MAX_TENTATIVI). Usa MailApp.sendEmail, nativo di Apps
+// Script: nessun token/servizio esterno da configurare, incluso nella quota
+// gratuita del progetto. Testo inviato cosi' com'e' (tolti solo gli asterischi
+// della formattazione WhatsApp, non essenziali in un'email).
+function _emailFallback(email, msg) {
+  if (!email) return false;
+  try {
+    MailApp.sendEmail({
+      to: email,
+      subject: CONFIG.STUDIO_NAME + " - Notifica importante",
+      body: msg.replace(/\*/g, ""),
+      name: CONFIG.STUDIO_NAME
+    });
+    return true;
+  } catch(e) {
+    Logger.log("Email fallback error: " + e.message);
     return false;
   }
 }
@@ -2165,7 +2189,12 @@ function drainCodaWA() {
       } else {
         const tentativi = (Number(rows[i][4]) || 0) + 1;
         sh.getRange(i + 1, 5).setValue(tentativi);
-        if (tentativi >= MAX_TENTATIVI) sh.getRange(i + 1, 4).setValue("Errore");
+        if (tentativi >= MAX_TENTATIVI) {
+          // WhatsApp ha fallito definitivamente: prova il fallback email (solo se
+          // non e' un messaggio Telegram e il cliente ha un'email nota in colonna H).
+          const emailOk = !isTelegram && _emailFallback(rows[i][7], rows[i][2]);
+          sh.getRange(i + 1, 4).setValue(emailOk ? "Errore (email inviata)" : "Errore");
+        }
       }
       // WAAPI raccomanda almeno 15s tra un messaggio e l'altro per non rischiare il ban del numero
       if (processate < MAX_PER_RUN) Utilities.sleep(15000);
